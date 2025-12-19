@@ -88,13 +88,9 @@ sub detect_backend {
         if ($? == 0) {
             my $container = $config{'docker_container_name'};
             if (!$container) {
-                my $ps = &backquote_command("docker ps --format '{{.ID}} {{.Image}} {{.Names}} {{.Labels}}' 2>/dev/null");
-                foreach my $line (split(/\n/, $ps)) {
-                    my ($id, $img, $name, $labels) = split(/\s+/, $line, 4);
-                    if (($img && $img =~ /wireguard/i) || ($labels && $labels =~ /wireguard/i)) {
-                        $container = $name || $id;
-                        last;
-                    }
+                my $list = &list_wireguard_containers();
+                if (@$list) {
+                    $container = $list->[0]->{'name'} || $list->[0]->{'id'};
                 }
             }
             if ($container) {
@@ -120,6 +116,25 @@ sub detect_backend {
         detail => 'No usable backend detected',
         diag => \%diag,
     };
+}
+
+# Enumerate WireGuard-like containers
+sub list_wireguard_containers {
+    my @out;
+    return \@out unless &has_command_in_path('docker') || &has_command_in_path('/usr/bin/docker');
+    my $ps = &backquote_command("docker ps --format '{{.ID}} {{.Names}} {{.Image}} {{.Labels}}' 2>/dev/null");
+    return \@out if $? != 0;
+    foreach my $line (split(/\n/, $ps)) {
+        my ($id, $name, $img, $labels) = split(/\s+/, $line, 4);
+        next unless ($img && $img =~ /wireguard/i) || ($labels && $labels =~ /wireguard/i);
+        push @out, {
+            id     => $id,
+            name   => $name,
+            image  => $img,
+            labels => $labels,
+        };
+    }
+    return \@out;
 }
 
 # List interface config files for a backend

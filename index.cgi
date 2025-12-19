@@ -5,10 +5,41 @@ use warnings;
 do 'wireguard-lib.pl';
 our (%text, %config, %in, %access);
 &init_config();
+&ReadParse();
+
+# Allow selecting Docker container when applicable
+if ($in{'docker_container'} && &can_edit()) {
+    my $containers = &list_wireguard_containers();
+    my %by_id = map { $_->{'id'} => $_ } @$containers;
+    &error($text{'container_invalid'}) unless $by_id{$in{'docker_container'}};
+    my $chosen = $by_id{$in{'docker_container'}};
+    my $store = $chosen->{'name'} || $chosen->{'id'};
+    $config{'docker_container_name'} = $store;
+    &save_module_config(\%config);
+}
 &ui_print_header(undef, $text{'index_title'}, "", undef, 1, 1);
 
 my $backend = &detect_backend();
 print &ui_subheading("$text{'index_backend'}: $backend->{detail}");
+my $containers = &list_wireguard_containers();
+
+if (&can_edit() && $backend->{type} eq 'docker' && @$containers) {
+    print &ui_form_start("index.cgi", "post");
+    print &ui_table_start($text{'container_select'}, undef, 2);
+    my @opts = map { [ $_->{'id'}, ($_->{'name'} ? "$_->{'name'} ($_->{'image'})" : "$_->{'id'} ($_->{'image'})") ] } @$containers;
+    my $selected = '';
+    foreach my $c (@$containers) {
+        if ($config{'docker_container_name'} && ($config{'docker_container_name'} eq $c->{'name'} || $config{'docker_container_name'} eq $c->{'id'})) {
+            $selected = $c->{'id'};
+            last;
+        }
+    }
+    print &ui_table_row($text{'container_label'},
+        &ui_select("docker_container", $selected, \@opts, 1));
+    print &ui_table_end();
+    print &ui_submit($text{'container_apply'});
+    print &ui_form_end();
+}
 
 if ($backend->{type} eq 'none') {
     print &ui_table_start($text{'index_diag'}, undef, 2);
@@ -18,6 +49,16 @@ if ($backend->{type} eq 'none') {
         }
     }
     print &ui_table_end();
+    if (&can_edit() && @$containers) {
+        print &ui_form_start("index.cgi", "post");
+        print &ui_table_start($text{'container_select'}, undef, 2);
+        my @opts = map { [ $_->{'id'}, ($_->{'name'} ? "$_->{'name'} ($_->{'image'})" : "$_->{'id'} ($_->{'image'})") ] } @$containers;
+        print &ui_table_row($text{'container_label'},
+            &ui_select("docker_container", undef, \@opts, 1));
+        print &ui_table_end();
+        print &ui_submit($text{'container_apply'});
+        print &ui_form_end();
+    }
     &ui_print_footer(undef, $text{'index_title'});
     exit;
 }

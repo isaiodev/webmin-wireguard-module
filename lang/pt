@@ -33,3 +33,7 @@ pubkey_invalid=Chave pública inválida
 allowedips_invalid=Formato de AllowedIPs inválido
 peer_added=Par adicionado com sucesso
 peer_deleted=Par excluído com sucesso
+container_select=Selecionar contêiner WireGuard
+container_label=Contêiner Docker
+container_apply=Usar contêiner
+container_invalid=Seleção de contêiner inválida

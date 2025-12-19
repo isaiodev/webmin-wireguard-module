@@ -33,3 +33,7 @@ pubkey_invalid=Invalid public key
 allowedips_invalid=Invalid AllowedIPs format
 peer_added=Peer added successfully
 peer_deleted=Peer deleted successfully
+container_select=Select WireGuard container
+container_label=Docker container
+container_apply=Use container
+container_invalid=Invalid container selection
