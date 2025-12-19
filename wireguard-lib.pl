@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-package wireguard;
 use strict;
 use warnings;
 
@@ -15,19 +14,6 @@ use POSIX qw(strftime);
 use Socket;
 
 our $DEFAULT_MODE = 0600;
-
-# WebminCore helper fallback for command lookup
-sub has_command_in_path {
-    my ($cmd) = @_;
-    if (defined &has_command) {
-        return &has_command($cmd);
-    }
-    foreach my $dir (split(/:/, $ENV{'PATH'} || '')) {
-        next unless $dir;
-        return 1 if -x "$dir/$cmd";
-    }
-    return 0;
-}
 
 # Validate an interface name
 sub validate_iface {
@@ -374,15 +360,6 @@ sub delete_peer_block {
 
 sub can_edit {
     return !$access{'nowrite'};
-}
-
-sub to_json_text {
-    my ($s) = @_;
-    $s = '' unless defined $s;
-    $s =~ s/\\/\\\\/g;
-    $s =~ s/"/\\"/g;
-    $s =~ s/[\r\n]//g;
-    return "\"$s\"";
 }
 
 1;
