@@ -1,0 +1,13 @@
+config_dir=/etc/wireguard
+docker_container_name=
+docker_config_dir=
+docker_iface_list_strategy=host_dir
+default_endpoint=
+default_dns=
+default_client_allowed_ips=0.0.0.0/0
+client_pool_cidr=10.0.0.0/24
+backup_retention=10
+enable_qr=1
+syncconf_enabled=0
+prefer_host_backend=1
+prefer_docker_backend=1
