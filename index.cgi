@@ -145,7 +145,6 @@ foreach my $iface (@ifaces) {
     }
 
     my @links;
-    push @links, &ui_link("peers.cgi?iface=".&urlize($iface), $text{'index_manage'});
     push @links, &ui_link("peer_create.cgi?iface=".&urlize($iface), "Add Device");
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=restart", $text{'index_restart'});
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=start", $text{'index_start'});
@@ -155,4 +154,34 @@ foreach my $iface (@ifaces) {
 }
 
 print &ui_table_end();
+
+# Show peers for each interface
+foreach my $iface (@ifaces) {
+    print "<br>";
+    print &ui_subheading("Peers for $iface");
+    
+    my $parsed;
+    if ($backend->{type} eq 'docker') {
+        $parsed = &parse_wg_config_docker($backend, $iface);
+    } else {
+        my $path = &get_config_path($backend, $iface);
+        $parsed = &parse_wg_config($path) if $path && -f $path;
+    }
+    
+    if ($parsed && @{$parsed->{peers}}) {
+        print &ui_table_start("Peers", "width=100%", 4);
+        print "<tr><th>Name</th><th>Public Key</th><th>Allowed IPs</th><th>Actions</th></tr>";
+        
+        foreach my $peer (@{$parsed->{peers}}) {
+            my $name = $peer->{'Name'} || 'Unnamed';
+            my $pubkey = substr($peer->{'PublicKey'} || '', 0, 20) . '...';
+            my $allowed = $peer->{'AllowedIPs'} || '';
+            my $delete_link = &ui_link("peer_delete.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'}), "Delete");
+            print &ui_table_row($name, $pubkey, $allowed, $delete_link);
+        }
+        print &ui_table_end();
+    } else {
+        print "<p>No peers configured for this interface.</p>";
+    }
+}
 &ui_print_footer(undef, $text{'index_title'});
