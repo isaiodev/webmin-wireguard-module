@@ -67,10 +67,10 @@ print &ui_table_row($text{'index_status'}, $status_line);
 print &ui_table_end();
 
 print &ui_table_start($text{'index_peers'}, "width=100%", 8);
-print &ui_table_header([ $text{'peers_name'}, $text{'peers_publickey'},
-    $text{'peers_allowedips'}, $text{'peers_endpoint'},
-    $text{'peers_last_handshake'}, $text{'peers_rx'}, $text{'peers_tx'},
-    $text{'index_actions'} ]);
+print "<tr><th>$text{'peers_name'}</th><th>$text{'peers_publickey'}</th>".
+      "<th>$text{'peers_allowedips'}</th><th>$text{'peers_endpoint'}</th>".
+      "<th>$text{'peers_last_handshake'}</th><th>$text{'peers_rx'}</th>".
+      "<th>$text{'peers_tx'}</th><th>$text{'index_actions'}</th></tr>";
 
 my $qr_enabled = $config{'enable_qr'} && &has_command('qrencode');
 foreach my $peer (@{$parsed->{peers}}) {
