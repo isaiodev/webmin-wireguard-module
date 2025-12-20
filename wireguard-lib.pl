@@ -180,6 +180,7 @@ sub list_interfaces {
         }
         closedir $dh;
     } elsif ($backend->{type} eq 'docker') {
+        # First try host-mounted directory
         if ($backend->{config_dir} && -d $backend->{config_dir}) {
             opendir(my $dh, $backend->{config_dir}) or return ();
             while (my $f = readdir($dh)) {
@@ -188,13 +189,11 @@ sub list_interfaces {
             }
             closedir $dh;
         } else {
-            my $strategy = $config{'docker_iface_list_strategy'} || 'host_dir';
-            if ($strategy eq 'docker_exec') {
-                my $out = &backquote_command("docker exec ".&quote_escape($backend->{container})." ls /config /etc/wireguard 2>/dev/null");
-                foreach my $line (split(/\n/, $out)) {
-                    next unless $line =~ /^([A-Za-z0-9_.-]+)\.conf$/;
-                    push @ifs, $1;
-                }
+            # Fallback: read from inside container
+            my $out = &backquote_command("docker exec ".&quote_escape($backend->{container})." ls /config 2>/dev/null");
+            foreach my $line (split(/\n/, $out)) {
+                next unless $line =~ /^([A-Za-z0-9_.-]+)\.conf$/;
+                push @ifs, $1;
             }
         }
     }
@@ -238,6 +237,47 @@ sub parse_wg_config {
         }
     }
     return { interface => \%iface, peers => \@peers, lines => $lines };
+}
+
+# Read config from Docker container if needed
+sub parse_wg_config_docker {
+    my ($backend, $iface) = @_;
+    return undef unless $backend->{type} eq 'docker' && $iface;
+    
+    my $out = &backquote_command("docker exec ".&quote_escape($backend->{container})." cat /config/$iface.conf 2>/dev/null");
+    return undef if $? != 0 || !$out;
+    
+    my @lines = split(/\n/, $out);
+    my %iface_data;
+    my @peers;
+    my $current;
+    my $in_peer = 0;
+    
+    foreach my $line (@lines) {
+        if ($line =~ /^\s*\[Interface\]/i) {
+            $in_peer = 0;
+            next;
+        }
+        if ($line =~ /^\s*\[Peer\]/i) {
+            $in_peer = 1;
+            $current = {};
+            push @peers, $current;
+            next;
+        }
+        if ($in_peer && $line =~ /^\s*#\s*Name:\s*(.+)$/i) {
+            $current->{'Name'} = $1;
+            next;
+        }
+        my ($k, $v) = $line =~ /^\s*([^=#]+?)\s*=\s*(.+)$/;
+        next unless defined $k;
+        $k =~ s/\s+$//;
+        if ($in_peer) {
+            $current->{$k} = $v;
+        } else {
+            $iface_data{$k} = $v;
+        }
+    }
+    return { interface => \%iface_data, peers => \@peers, lines => \@lines };
 }
 
 # Backup a configuration file

@@ -18,6 +18,8 @@ All notable changes to the Webmin WireGuard Module will be documented in this fi
 - **Installation script**: Created `install_module.sh` script for proper module installation with automatic path detection
 - **Docker container actions**: Added proper support for linuxserver/wireguard containers with `docker exec` commands
 - **Container status display**: Backend detection now shows container running status
+- **Docker container config reading**: Added ability to read config files from inside Docker containers when host-mounted directory is not accessible
+- **Docker container name configuration**: Added form field to specify Docker container name (e.g., 'wireguard')
 
 ### Changed
 - **Backend detection logic**: Modified to use configured directory path for both host and Docker backends instead of separate docker_config_dir

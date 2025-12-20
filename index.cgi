@@ -23,9 +23,12 @@ if ($in{'docker_container'} && &can_edit()) {
 if (&can_edit() && $in{'save_config'}) {
     if ($in{'config_dir'}) {
         $config{'config_dir'} = $in{'config_dir'};
-        &save_module_config(\%config);
-        print "<p><b>Configuration saved. Config directory set to: $in{'config_dir'}</b></p>";
     }
+    if ($in{'docker_container_name'}) {
+        $config{'docker_container_name'} = $in{'docker_container_name'};
+    }
+    &save_module_config(\%config);
+    print "<p><b>Configuration saved.</b></p>";
 }
 
 my $backend = &detect_backend();
@@ -38,6 +41,8 @@ if (&can_edit()) {
     print &ui_table_start("Configuration", undef, 2);
     print &ui_table_row("WireGuard Config Directory:",
         &ui_textbox("config_dir", $config{'config_dir'} || '/etc/wireguard', 50));
+    print &ui_table_row("Docker Container Name:",
+        &ui_textbox("docker_container_name", $config{'docker_container_name'} || 'wireguard', 30));
     print &ui_table_end();
     print &ui_submit("Save Configuration");
     print &ui_form_end();
@@ -109,6 +114,10 @@ foreach my $iface (@ifaces) {
     my $peer_count = 0;
     if ($path && -f $path) {
         my $parsed = &parse_wg_config($path);
+        $peer_count = scalar(@{$parsed->{peers}}) if $parsed;
+    } elsif ($backend->{type} eq 'docker') {
+        # Try reading from inside container
+        my $parsed = &parse_wg_config_docker($backend, $iface);
         $peer_count = scalar(@{$parsed->{peers}}) if $parsed;
     }
 
