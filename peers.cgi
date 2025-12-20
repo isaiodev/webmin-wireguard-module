@@ -74,11 +74,13 @@ print "<img id='qrImg' src='' alt='QR Code' style='max-width:260px;'/>";
 print "</div></div>";
 print "<script>function showQR(url,title){var m=document.getElementById('qrModal');var i=document.getElementById('qrImg');var t=document.getElementById('qrTitle');i.src=url;t.textContent=title||'QR Code';m.style.display='block';} function closeQR(){document.getElementById('qrModal').style.display='none';document.getElementById('qrImg').src='';}</script>";
 
-print &ui_table_start($text{'index_peers'}, "width=100%", 8);
-print "<tr><th>$text{'peers_name'}</th><th>$text{'peers_publickey'}</th>".
+print "<div class='table-responsive'>";
+print "<table data-table-type='ui-table' class='table table-striped table-condensed table-subtable' width='100%'>";
+print "<thead><tr><th>$text{'peers_name'}</th><th>$text{'peers_publickey'}</th>".
       "<th>$text{'peers_allowedips'}</th><th>$text{'peers_endpoint'}</th>".
       "<th>$text{'peers_last_handshake'}</th><th>$text{'peers_rx'}</th>".
-      "<th>$text{'peers_tx'}</th><th>$text{'index_actions'}</th></tr>";
+      "<th>$text{'peers_tx'}</th><th>$text{'index_actions'}</th></tr></thead>";
+print "<tbody>";
 
 my $qr_enabled = $config{'enable_qr'} && &has_command('qrencode');
 foreach my $peer (@{$parsed->{peers}}) {
@@ -104,9 +106,18 @@ foreach my $peer (@{$parsed->{peers}}) {
         }
     }
     my $action = @actions ? join(" | ", @actions) : '-';
-    print &ui_table_row($name, $pub, $allowed, $endpoint, $hs, $rx, $tx, $action);
+    print "<tr>";
+    print "<td>".&html_escape($name)."</td>";
+    print "<td>".&html_escape($pub)."</td>";
+    print "<td>".&html_escape($allowed)."</td>";
+    print "<td>".&html_escape($endpoint)."</td>";
+    print "<td>".&html_escape($hs)."</td>";
+    print "<td>".&html_escape($rx)."</td>";
+    print "<td>".&html_escape($tx)."</td>";
+    print "<td>$action</td>";
+    print "</tr>";
 }
-print &ui_table_end();
+print "</tbody></table></div>";
 
 if (&can_edit()) {
     print "<br>";

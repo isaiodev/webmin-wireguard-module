@@ -136,8 +136,10 @@ if (!@ifaces) {
     exit;
 }
 
-print &ui_table_start($text{'index_interfaces'}, "width=100%", 4);
-print "<tr><th>$text{'index_interfaces'}</th><th>$text{'index_status'}</th><th>$text{'index_peers'}</th><th>$text{'index_actions'}</th></tr>";
+print "<div class='table-responsive'>";
+print "<table data-table-type='ui-table' class='table table-striped table-condensed table-subtable' width='100%'>";
+print "<thead><tr><th>$text{'index_interfaces'}</th><th>$text{'index_status'}</th><th>$text{'index_peers'}</th><th>$text{'index_actions'}</th></tr></thead>";
+print "<tbody>";
 
 foreach my $iface (@ifaces) {
     my $status = '-';
@@ -173,10 +175,15 @@ foreach my $iface (@ifaces) {
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=start", $text{'index_start'});
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=stop", $text{'index_stop'});
 
-    print &ui_table_row($iface, $status, $peer_count, join(" | ", @links));
+    print "<tr>";
+    print "<td>".&html_escape($iface)."</td>";
+    print "<td>".&html_escape($status)."</td>";
+    print "<td>".&html_escape($peer_count)."</td>";
+    print "<td>".join(" | ", @links)."</td>";
+    print "</tr>";
 }
 
-print &ui_table_end();
+print "</tbody></table></div>";
 
 # Show peers for each interface
 print "<div id='qrModal' style='display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5);'>";
@@ -206,8 +213,10 @@ foreach my $iface (@ifaces) {
     
     if ($parsed && @{$parsed->{peers}}) {
         my $qr_enabled = $config{'enable_qr'} && &has_command('qrencode');
-        print &ui_table_start("Peers", "width=100%", 4);
-        print "<tr><th>Name</th><th>Public Key</th><th>Allowed IPs</th><th>Actions</th></tr>";
+        print "<div class='table-responsive'>";
+        print "<table data-table-type='ui-table' class='table table-striped table-condensed table-subtable' width='100%'>";
+        print "<thead><tr><th>Name</th><th>Public Key</th><th>Allowed IPs</th><th>Actions</th></tr></thead>";
+        print "<tbody>";
         
         foreach my $peer (@{$parsed->{peers}}) {
             my $peer_name = $peer->{'Name'} || '';
@@ -228,9 +237,14 @@ foreach my $iface (@ifaces) {
                 }
             }
             my $actions = @actions ? join(" | ", @actions) : '-';
-            print &ui_table_row($name, $pubkey, $allowed, $actions);
+            print "<tr>";
+            print "<td>".&html_escape($name)."</td>";
+            print "<td>".&html_escape($pubkey)."</td>";
+            print "<td>".&html_escape($allowed)."</td>";
+            print "<td>$actions</td>";
+            print "</tr>";
         }
-        print &ui_table_end();
+        print "</tbody></table></div>";
     } else {
         print "<p>No peers configured for this interface.</p>";
     }
