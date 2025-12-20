@@ -339,6 +339,13 @@ sub remove_peer_lines {
     return \@out;
 }
 
+sub update_peer_lines {
+    my ($lines, $pubkey, $peer_lines) = @_;
+    return undef unless $lines && $pubkey && $peer_lines;
+    my $filtered = &remove_peer_lines($lines, $pubkey);
+    return &append_peer_lines($filtered, $peer_lines);
+}
+
 sub write_docker_config {
     my ($backend, $iface, $lines) = @_;
     &set_last_error('');

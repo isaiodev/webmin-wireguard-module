@@ -179,6 +179,14 @@ foreach my $iface (@ifaces) {
 print &ui_table_end();
 
 # Show peers for each interface
+print "<div id='qrModal' style='display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5);'>";
+print "<div style='background-color:white; margin:10% auto; padding:20px; border:1px solid #888; width:320px; text-align:center;'>";
+print "<span onclick='closeQR()' style='color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;'>&times;</span>";
+print "<h3 id='qrTitle'>QR Code</h3>";
+print "<img id='qrImg' src='' alt='QR Code' style='max-width:260px;'/>";
+print "</div></div>";
+print "<script>function showQR(url,title){var m=document.getElementById('qrModal');var i=document.getElementById('qrImg');var t=document.getElementById('qrTitle');i.src=url;t.textContent=title||'QR Code';m.style.display='block';} function closeQR(){document.getElementById('qrModal').style.display='none';document.getElementById('qrImg').src='';}</script>";
+
 foreach my $iface (@ifaces) {
     print "<br>";
     print &ui_subheading("Peers for $iface");
@@ -208,13 +216,15 @@ foreach my $iface (@ifaces) {
             my $allowed = $peer->{'AllowedIPs'} || '';
             my @actions;
             if (&can_edit()) {
+                push @actions, &ui_link("peer_edit.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'}), $text{'peers_edit'});
                 push @actions, &ui_link("peer_delete.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'}), $text{'peers_delete'});
             }
             my $conf_path = &peer_config_path($iface, $peer->{'PublicKey'});
             if ($conf_path && -f $conf_path) {
                 push @actions, &ui_link("peer_download.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."&name=".&urlize($peer_name), $text{'peers_download'});
                 if ($qr_enabled) {
-                    push @actions, &ui_link("peer_qr.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."&name=".&urlize($peer_name), $text{'peers_qr'});
+                    my $qr_url = "peer_qr.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."&name=".&urlize($peer_name)."&raw=1";
+                    push @actions, "<a href='#' onclick=\"showQR('$qr_url','QR - ".&html_escape($name)."'); return false;\">$text{'peers_qr'}</a>";
                 }
             }
             my $actions = @actions ? join(" | ", @actions) : '-';
