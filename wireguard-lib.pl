@@ -9,7 +9,6 @@ use WebminCore;
 &textdomain('wireguard');
 
 use File::Copy qw(copy);
-use File::Temp qw(tempfile);
 use POSIX qw(strftime);
 use Socket;
 
@@ -48,8 +47,8 @@ sub safe_cmd {
 }
 
 sub can_edit {
-    # Always allow editing unless explicitly set to readonly
-    return !defined($access{'readonly'}) || !$access{'readonly'};
+    return (!defined($access{'readonly'}) || !$access{'readonly'})
+        && (!$access{'nowrite'});
 }
 
 sub urlize {
@@ -61,9 +60,7 @@ sub urlize {
 sub has_command_in_path {
     my ($cmd) = @_;
     return 0 unless $cmd;
-    # Check if it's an absolute path
     return -x $cmd if $cmd =~ m{^/};
-    # Search in PATH
     foreach my $dir (split(/:/, $ENV{'PATH'} || '')) {
         return 1 if -x "$dir/$cmd";
     }
@@ -82,7 +79,6 @@ sub detect_backend {
     my $backend_type = $config{'backend_type'} || 'docker';
     
     if ($backend_type eq 'docker') {
-        # Docker mode
         my $container = $config{'docker_container_name'} || 'wireguard';
         my $container_config_path = $config{'docker_config_path'} || '/config';
         my $docker = &has_command_in_path('docker') || &has_command_in_path('/usr/bin/docker');
@@ -104,7 +100,6 @@ sub detect_backend {
             $diag{'docker'} = 'Docker not found in PATH';
         }
     } elsif ($backend_type eq 'host') {
-        # Host mode
         my $wg_path = '/usr/bin/wg';
         my $systemctl = &has_command_in_path('systemctl') || -x '/bin/systemctl';
         my $host_ok = (-x $wg_path) && (-d $cfg_dir) && $systemctl;
@@ -145,8 +140,8 @@ sub list_wireguard_containers {
     return \@out if $? != 0;
     foreach my $line (split(/\n/, $ps)) {
         my ($id, $name, $img, $labels) = split(/\s+/, $line, 4);
-        # Look for linuxserver/wireguard or any wireguard-related containers
-        next unless ($img && ($img =~ /wireguard/i || $img =~ /linuxserver\/wireguard/i)) || ($labels && $labels =~ /wireguard/i);
+        next unless ($img && ($img =~ /wireguard/i || $img =~ /linuxserver\/wireguard/i))
+            || ($labels && $labels =~ /wireguard/i);
         push @out, {
             id     => $id,
             name   => $name,
@@ -171,7 +166,6 @@ sub list_interfaces {
         }
         closedir $dh;
     } elsif ($backend->{type} eq 'docker') {
-        # For Docker, read from the specified container config path
         my $container_path = $backend->{container_config_path} || '/config';
         my $out = &backquote_command("docker exec ".&quote_escape($backend->{container})." ls $container_path 2>/dev/null");
         if ($? == 0 && $out) {
@@ -215,9 +209,6 @@ sub parse_wg_config {
             $current->{$k} = $v;
         } else {
             $iface{$k} = $v;
-        }
-        if ($in_peer && $line =~ /^\s*#\s*Name:\s*(.+)$/i) {
-            $current->{'Name'} = $1;
         }
     }
     return { interface => \%iface, peers => \@peers, lines => $lines };
@@ -348,110 +339,7 @@ sub get_peer_stats {
 sub get_config_path {
     my ($backend, $iface) = @_;
     return undef unless $backend && $iface;
-    if ($backend->{type} eq 'host') {
-        return "$backend->{config_dir}/$iface.conf";
-    } elsif ($backend->{type} eq 'docker' && $backend->{config_dir}) {
-        return "$backend->{config_dir}/$iface.conf";
-    }
-    return undef;
-}
-
-sub apply_changes {
-    my ($backend, $iface) = @_;
-    return (1, 'No backend available') if $backend->{type} eq 'none';
-    if ($backend->{type} eq 'host') {
-        return safe_cmd(['/bin/systemctl','restart',"wg-quick\@$iface"]);
-    } else {
-        # For Docker, restart the interface inside the container
-        my ($code, $out) = safe_cmd(['docker','exec',$backend->{container},'wg-quick','down',$iface]);
-        my ($code2, $out2) = safe_cmd(['docker','exec',$backend->{container},'wg-quick','up',$iface]);
-        return ($code2, "$out\n$out2");
-    }
-}
-
-sub service_action {
-    my ($backend, $iface, $action) = @_;
-    return (1, "No backend available") if $backend->{type} eq 'none';
-    
-    if ($backend->{type} eq 'host') {
-        if ($action eq 'start') {
-            return safe_cmd(['/bin/systemctl','start',"wg-quick\@$iface"]);
-        } elsif ($action eq 'stop') {
-            return safe_cmd(['/bin/systemctl','stop',"wg-quick\@$iface"]);
-        } elsif ($action eq 'restart') {
-            return safe_cmd(['/bin/systemctl','restart',"wg-quick\@$iface"]);
-        }
-    } else {
-        # Docker actions
-        if ($action eq 'start') {
-            return safe_cmd(['docker','exec',$backend->{container},'wg-quick','up',$iface]);
-        } elsif ($action eq 'stop') {
-            return safe_cmd(['docker','exec',$backend->{container},'wg-quick','down',$iface]);
-        } elsif ($action eq 'restart') {
-            my ($code, $out) = safe_cmd(['docker','exec',$backend->{container},'wg-quick','down',$iface]);
-            my ($code2, $out2) = safe_cmd(['docker','exec',$backend->{container},'wg-quick','up',$iface]);
-            return ($code2, "$out\n$out2");
-        }
-    }
-    return (1, "Unknown action: $action");
-}
-
-1;
-    my ($path, $lines) = @_;
-    &backup_file($path);
-    &write_file_lines($path, $lines);
-    &ensure_permissions($path);
-    &flush_file_lines($path);
-}
-
-# Next available /32 from pool
-sub suggest_next_ip {
-    my ($pool, $used_ref) = @_;
-    my %used = map { $_ => 1 } @$used_ref;
-    return undef unless $pool && $pool =~ m{^([0-9]{1,3}(?:\.[0-9]{1,3}){3})/(\d{1,2})$};
-    my ($base, $mask) = ($1, $2);
-    return undef if $mask > 32;
-    my $net = unpack("N", inet_aton($base));
-    my $hosts = 2 ** (32 - $mask);
-    for (my $i = 1; $i < $hosts-1; $i++) {
-        my $addr = inet_ntoa(pack("N", $net + $i));
-        next if $used{$addr};
-        return "$addr/32";
-    }
-    return undef;
-}
-
-# Get peer stats via wg show dump
-sub get_peer_stats {
-    my ($backend, $iface) = @_;
-    return {} unless $backend->{type} && $iface;
-    my @cmd;
-    if ($backend->{type} eq 'host') {
-        @cmd = ('/usr/bin/wg', 'show', $iface, 'dump');
-    } elsif ($backend->{type} eq 'docker') {
-        @cmd = ('docker', 'exec', $backend->{container}, 'wg', 'show', $iface, 'dump');
-    } else { return {}; }
-    my ($code, $out) = &safe_cmd(\@cmd);
-    return {} if $code != 0 || !$out;
-    my %stats;
-    foreach my $line (split(/\n/, $out)) {
-        my @c = split(/\t/, $line);
-        next if $c[0] && $c[0] eq 'interface';
-        next unless @c >= 8;
-        $stats{$c[1]} = {
-            endpoint => $c[3],
-            allowed_ips => $c[4],
-            last_handshake => $c[5],
-            rx => $c[6],
-            tx => $c[7],
-        };
-    }
-    return \%stats;
-}
-
-sub get_config_path {
-    my ($backend, $iface) = @_;
-    return undef unless $backend && $iface;
+    return undef unless &validate_iface($iface);
     if ($backend->{type} eq 'host') {
         return "$backend->{config_dir}/$iface.conf";
     } elsif ($backend->{type} eq 'docker' && $backend->{config_dir}) {
@@ -466,7 +354,6 @@ sub apply_changes {
     if ($backend->{type} eq 'host') {
         return safe_cmd(['/bin/systemctl','restart',"wg-quick\@$iface"]);
     } else {
-        # For Docker, restart the interface inside the container
         my ($code, $out) = safe_cmd(['docker','exec',$backend->{container},'wg-quick','down',$iface]);
         my ($code2, $out2) = safe_cmd(['docker','exec',$backend->{container},'wg-quick','up',$iface]);
         return ($code2, "$out\n$out2");
@@ -486,7 +373,6 @@ sub service_action {
             return safe_cmd(['/bin/systemctl','restart',"wg-quick\@$iface"]);
         }
     } else {
-        # Docker actions
         if ($action eq 'start') {
             return safe_cmd(['docker','exec',$backend->{container},'wg-quick','up',$iface]);
         } elsif ($action eq 'stop') {
@@ -500,38 +386,15 @@ sub service_action {
     return (1, "Unknown action: $action");
 }
 
-1;e} eq 'none';
-    if ($backend->{type} eq 'host') {
-        return safe_cmd(['/bin/systemctl','restart',"wg-quick\@$iface"]);
-    } else {
-        return safe_cmd(['docker','restart',$backend->{container}]);
-    }
-}
-
-sub service_action {
-    my ($backend, $iface, $action) = @_;
-    if ($backend->{type} eq 'host') {
-        return safe_cmd(['/bin/systemctl',$action,"wg-quick\@$iface"]);
-    } elsif ($backend->{type} eq 'docker') {
-        return safe_cmd(['docker',$action,$backend->{container}]);
-    }
-    return (1, "No backend");
-}
-
-sub get_config_path {
-    my ($backend, $iface) = @_;
-    return undef unless validate_iface($iface);
-    my $dir = $backend->{config_dir} || '/etc/wireguard';
-    return "$dir/$iface.conf";
-}
-
 # Create a new peer block
 sub add_peer_block {
     my ($path, $peer_lines) = @_;
+    return 0 unless $path && $peer_lines && @$peer_lines;
     my $lines = &read_file_lines($path);
     push @$lines, '';
     push @$lines, @$peer_lines;
     &save_config_lines($path, $lines);
+    return 1;
 }
 
 # Delete peer by public key
@@ -565,20 +428,4 @@ sub delete_peer_block {
     &save_config_lines($path, \@out);
 }
 
-sub can_edit {
-    return !$access{'nowrite'};
-}
-
 1;
-# Add peer block to config file
-sub add_peer_block {
-    my ($path, $block_ref) = @_;
-    return 0 unless $path && $block_ref && @$block_ref;
-    
-    my $lines = &read_file_lines($path);
-    push @$lines, "";
-    push @$lines, @$block_ref;
-    
-    &save_config_lines($path, $lines);
-    return 1;
-}
