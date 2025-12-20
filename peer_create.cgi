@@ -165,7 +165,7 @@ if ($in{'save'}) {
     }
 
     &ui_print_header(undef, $text{'peer_create_title'}, "", undef, 1, 1);
-    print &ui_subheading($text{'peer_added'});
+    print &ui_subheading("$text{'peer_create_title'} - Step 2 of 2");
     print &ui_table_start("Client configuration", undef, 1);
     print &ui_table_row("Config", "<pre>".&html_escape($client_conf)."</pre>");
     
@@ -191,13 +191,17 @@ if ($in{'save'}) {
         print "<br>";
         print &ui_link("peer_download.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($client_pub)."&name=".&urlize($in{'name'} || ''), $text{'peers_download'});
     }
+    print "<br>";
+    print &ui_link("peer_create.cgi?iface=".&urlize($iface), "Add another peer");
+    print " | ";
     print &ui_link("peers.cgi?iface=".&urlize($iface), $text{'peers_back'});
     &ui_print_footer("index.cgi", $text{'index_title'});
     exit;
 }
 
 &ui_print_header(undef, $text{'peer_create_title'}, "", undef, 1, 1);
-print &ui_subheading("$text{'peers_title'} $iface");
+print &ui_subheading("$text{'peer_create_title'} - Step 1 of 2");
+print "<p>Enter peer details, then review and download the client configuration.</p>";
 
 print &ui_form_start("peer_create.cgi", "post");
 print &ui_hidden("iface", $iface);
@@ -213,6 +217,6 @@ print &ui_table_row("Preshared key",
 print &ui_table_row("Persistent keepalive",
     &ui_textbox("keepalive", "25", 5)." seconds (optional)");
 print &ui_table_end();
-print &ui_submit($text{'peers_add'});
+print &ui_submit($text{'peers_add'}, "save");
 print &ui_form_end();
 &ui_print_footer("index.cgi", $text{'index_title'});
