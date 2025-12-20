@@ -1,6 +1,6 @@
 desc=WireGuard VPN management
 longdesc=Manage WireGuard interfaces, peers, and runtime status on host or Docker backends.
-category=network
+category=net
 depends=webmin
 os_support=debian-linux
 version=1.0
