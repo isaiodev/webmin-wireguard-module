@@ -97,13 +97,10 @@ foreach my $peer (@{$parsed->{peers}}) {
         push @actions, "<a class='btn btn-default btn-tiny' href='peer_edit.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($pub)."'>$text{'peers_edit'}</a>";
         push @actions, "<a class='btn btn-danger btn-tiny' href='peer_delete.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($pub)."'>$text{'peers_delete'}</a>";
     }
-    my $conf_path = &peer_config_path($iface, $pub);
-    if ($conf_path && -f $conf_path) {
-        push @actions, "<a class='btn btn-default btn-tiny' href='peer_download.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($pub)."&name=".&urlize($name)."'>$text{'peers_download'}</a>";
-        if ($qr_enabled) {
-            my $qr_url = "peer_qr.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($pub)."&name=".&urlize($name)."&raw=1";
-            push @actions, "<a class='btn btn-default btn-tiny' href='#' onclick=\"showQR('$qr_url','QR - ".&html_escape($name || $pub)."'); return false;\">$text{'peers_qr'}</a>";
-        }
+    push @actions, "<a class='btn btn-default btn-tiny' href='peer_download.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($pub)."&name=".&urlize($name)."'>$text{'peers_download'}</a>";
+    if ($qr_enabled) {
+        my $qr_url = "peer_qr.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($pub)."&name=".&urlize($name)."&raw=1";
+        push @actions, "<a class='btn btn-default btn-tiny' href='#' onclick=\"showQR('$qr_url','QR - ".&html_escape($name || $pub)."'); return false;\">$text{'peers_qr'}</a>";
     }
     my $action = @actions ? join(" | ", @actions) : '-';
     print "<tr>";

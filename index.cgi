@@ -228,13 +228,10 @@ foreach my $iface (@ifaces) {
                 push @actions, "<a class='btn btn-default btn-tiny' href='peer_edit.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."'>$text{'peers_edit'}</a>";
                 push @actions, "<a class='btn btn-danger btn-tiny' href='peer_delete.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."'>$text{'peers_delete'}</a>";
             }
-            my $conf_path = &peer_config_path($iface, $peer->{'PublicKey'});
-            if ($conf_path && -f $conf_path) {
-                push @actions, "<a class='btn btn-default btn-tiny' href='peer_download.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."&name=".&urlize($peer_name)."'>$text{'peers_download'}</a>";
-                if ($qr_enabled) {
-                    my $qr_url = "peer_qr.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."&name=".&urlize($peer_name)."&raw=1";
-                    push @actions, "<a class='btn btn-default btn-tiny' href='#' onclick=\"showQR('$qr_url','QR - ".&html_escape($name)."'); return false;\">$text{'peers_qr'}</a>";
-                }
+            push @actions, "<a class='btn btn-default btn-tiny' href='peer_download.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."&name=".&urlize($peer_name)."'>$text{'peers_download'}</a>";
+            if ($qr_enabled) {
+                my $qr_url = "peer_qr.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."&name=".&urlize($peer_name)."&raw=1";
+                push @actions, "<a class='btn btn-default btn-tiny' href='#' onclick=\"showQR('$qr_url','QR - ".&html_escape($name)."'); return false;\">$text{'peers_qr'}</a>";
             }
             my $actions = @actions ? join(" | ", @actions) : '-';
             print "<tr>";
