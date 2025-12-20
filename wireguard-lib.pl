@@ -79,14 +79,14 @@ sub has_command {
 sub detect_backend {
     my %diag;
     my $cfg_dir = $config{'config_dir'} || '/etc/wireguard';
-    my $wg_path = '/usr/bin/wg';
-    my $systemctl = &has_command_in_path('systemctl') || -x '/bin/systemctl';
-
-    # Check for Docker first if container name is specified
-    if ($config{'docker_container_name'}) {
+    my $backend_type = $config{'backend_type'} || 'docker';
+    
+    if ($backend_type eq 'docker') {
+        # Docker mode
+        my $container = $config{'docker_container_name'} || 'wireguard';
+        my $container_config_path = $config{'docker_config_path'} || '/config';
         my $docker = &has_command_in_path('docker') || &has_command_in_path('/usr/bin/docker');
         if ($docker) {
-            my $container = $config{'docker_container_name'};
             my $running = &backquote_command("docker inspect -f '{{.State.Running}}' ".&quote_escape($container)." 2>/dev/null");
             if ($? == 0) {
                 my $status = ($running =~ /true/) ? 'running' : 'stopped';
@@ -94,69 +94,45 @@ sub detect_backend {
                     type       => 'docker',
                     container  => $container,
                     config_dir => $cfg_dir,
-                    detail     => "docker ($container - $status)",
-                };
-            }
-        }
-    }
-
-    # Try host mode if WireGuard tools are available
-    my $host_ok = (-x $wg_path) && (-d $cfg_dir) && $systemctl;
-    if ($host_ok) {
-        my $unit_exists = (-f '/lib/systemd/system/wg-quick@.service')
-            || (-f '/etc/systemd/system/wg-quick@.service');
-        if (!$unit_exists && $systemctl) {
-            my $out = &backquote_command("systemctl list-unit-files 2>/dev/null");
-            $unit_exists = ($out =~ /wg-quick\@/);
-        }
-        if ($unit_exists) {
-            return {
-                type       => 'host',
-                config_dir => $cfg_dir,
-                detail     => "host (wg + wg-quick)",
-            };
-        }
-    }
-
-    # Fallback to any existing config directory (assume Docker)
-    if (-d $cfg_dir) {
-        return {
-            type       => 'docker',
-            container  => $config{'docker_container_name'} || 'wireguard',
-            config_dir => $cfg_dir,
-            detail     => "docker (config dir: $cfg_dir)",
-        };
-    }
-
-    # Auto-detect Docker containers
-    my $docker = &has_command_in_path('docker') || &has_command_in_path('/usr/bin/docker');
-    if ($docker) {
-        my $info_out = &backquote_command("docker info 2>&1");
-        if ($? == 0) {
-            my $list = &list_wireguard_containers();
-            if (@$list) {
-                my $container = $list->[0]->{'name'} || $list->[0]->{'id'};
-                my $running = &backquote_command("docker inspect -f '{{.State.Running}}' ".&quote_escape($container)." 2>/dev/null");
-                my $status = ($running =~ /true/) ? 'running' : 'stopped';
-                return {
-                    type       => 'docker',
-                    container  => $container,
-                    config_dir => $cfg_dir,
-                    detail     => "docker ($container - $status)",
+                    container_config_path => $container_config_path,
+                    detail     => "Docker Container ($container - $status)",
                 };
             } else {
-                $diag{'docker'} = 'No WireGuard container detected.';
+                $diag{'docker'} = "Container '$container' not found";
             }
         } else {
-            $diag{'docker'} = 'Docker daemon unreachable.';
+            $diag{'docker'} = 'Docker not found in PATH';
         }
-    } else {
-        $diag{'docker'} = 'Docker not found in PATH.';
+    } elsif ($backend_type eq 'host') {
+        # Host mode
+        my $wg_path = '/usr/bin/wg';
+        my $systemctl = &has_command_in_path('systemctl') || -x '/bin/systemctl';
+        my $host_ok = (-x $wg_path) && (-d $cfg_dir) && $systemctl;
+        
+        if ($host_ok) {
+            my $unit_exists = (-f '/lib/systemd/system/wg-quick@.service')
+                || (-f '/etc/systemd/system/wg-quick@.service');
+            if (!$unit_exists && $systemctl) {
+                my $out = &backquote_command("systemctl list-unit-files 2>/dev/null");
+                $unit_exists = ($out =~ /wg-quick\@/);
+            }
+            if ($unit_exists) {
+                return {
+                    type       => 'host',
+                    config_dir => $cfg_dir,
+                    detail     => "Native Linux Installation (wg-quick)",
+                };
+            } else {
+                $diag{'host'} = 'wg-quick systemd service not found';
+            }
+        } else {
+            $diag{'host'} = 'WireGuard tools or config directory not found';
+        }
     }
-
+    
     return {
         type => 'none',
-        detail => 'No usable backend detected',
+        detail => 'Backend not configured or unavailable',
         diag => \%diag,
     };
 }
@@ -195,22 +171,14 @@ sub list_interfaces {
         }
         closedir $dh;
     } elsif ($backend->{type} eq 'docker') {
-        # For Docker, always read from inside the container first
-        my $out = &backquote_command("docker exec ".&quote_escape($backend->{container})." ls /config 2>/dev/null");
+        # For Docker, read from the specified container config path
+        my $container_path = $backend->{container_config_path} || '/config';
+        my $out = &backquote_command("docker exec ".&quote_escape($backend->{container})." ls $container_path 2>/dev/null");
         if ($? == 0 && $out) {
             foreach my $line (split(/\n/, $out)) {
                 next unless $line =~ /^([A-Za-z0-9_.-]+)\.conf$/;
                 push @ifs, $1;
             }
-        }
-        # If no files found in container, try host-mounted directory as fallback
-        if (!@ifs && $backend->{config_dir} && -d $backend->{config_dir}) {
-            opendir(my $dh, $backend->{config_dir}) or return ();
-            while (my $f = readdir($dh)) {
-                next unless $f =~ /^([A-Za-z0-9_.-]+)\.conf$/;
-                push @ifs, $1;
-            }
-            closedir $dh;
         }
     }
     return @ifs;
@@ -260,7 +228,8 @@ sub parse_wg_config_docker {
     my ($backend, $iface) = @_;
     return undef unless $backend->{type} eq 'docker' && $iface;
     
-    my $out = &backquote_command("docker exec ".&quote_escape($backend->{container})." cat /config/$iface.conf 2>/dev/null");
+    my $container_path = $backend->{container_config_path} || '/config';
+    my $out = &backquote_command("docker exec ".&quote_escape($backend->{container})." cat $container_path/$iface.conf 2>/dev/null");
     return undef if $? != 0 || !$out;
     
     my @lines = split(/\n/, $out);

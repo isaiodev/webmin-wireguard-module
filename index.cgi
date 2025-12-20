@@ -27,6 +27,12 @@ if (&can_edit() && $in{'save_config'}) {
     if ($in{'docker_container_name'}) {
         $config{'docker_container_name'} = $in{'docker_container_name'};
     }
+    if ($in{'backend_type'}) {
+        $config{'backend_type'} = $in{'backend_type'};
+    }
+    if ($in{'docker_config_path'}) {
+        $config{'docker_config_path'} = $in{'docker_config_path'};
+    }
     &save_module_config(\%config);
     print "<p><b>Configuration saved.</b></p>";
 }
@@ -39,10 +45,21 @@ if (&can_edit()) {
     print &ui_form_start("index.cgi", "post");
     print &ui_hidden("save_config", 1);
     print &ui_table_start("Configuration", undef, 2);
-    print &ui_table_row("WireGuard Config Directory:",
-        &ui_textbox("config_dir", $config{'config_dir'} || '/etc/wireguard', 50));
+    
+    # Backend type selection
+    my @backend_opts = (
+        ['docker', 'Docker Container (linuxserver/wireguard)'],
+        ['host', 'Native Linux Installation (wg-quick)']
+    );
+    print &ui_table_row("WireGuard Backend:",
+        &ui_radio("backend_type", $config{'backend_type'} || 'docker', \@backend_opts));
+    
     print &ui_table_row("Docker Container Name:",
         &ui_textbox("docker_container_name", $config{'docker_container_name'} || 'wireguard', 30));
+    print &ui_table_row("Config Path Inside Container:",
+        &ui_textbox("docker_config_path", $config{'docker_config_path'} || '/config', 30));
+    print &ui_table_row("Host Config Directory (for Native):",
+        &ui_textbox("config_dir", $config{'config_dir'} || '/etc/wireguard', 50));
     print &ui_table_end();
     print &ui_submit("Save Configuration");
     print &ui_form_end();
