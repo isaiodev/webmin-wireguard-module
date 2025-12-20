@@ -8,9 +8,12 @@ All notable changes to the Webmin WireGuard Module will be documented in this fi
 - **Fixed undefined subroutine errors**: Added missing `has_command_in_path` function with fallback implementation for PATH searching
 - **Fixed ui_text error**: Replaced non-existent `ui_text` function with simple HTML print statement
 - **Fixed ui_table_header error**: Replaced non-existent `ui_table_header` function with HTML table header row
+- **Fixed backend detection**: Corrected logic to properly detect Docker mode when custom config directory is specified
+- **Fixed missing action buttons**: Added missing `urlize` function and fixed backend detection for Docker containers
 - **Added missing functions**: 
   - `can_edit()` - Checks user write permissions based on Webmin ACL
   - `get_config_path()` - Returns full path to WireGuard interface configuration files
+  - `urlize()` - URL encodes interface names for links
 
 ### Added
 - **Custom config directory support**: Added configuration form in main interface to specify custom WireGuard config directory
