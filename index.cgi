@@ -146,6 +146,7 @@ foreach my $iface (@ifaces) {
 
     my @links;
     push @links, &ui_link("peers.cgi?iface=".&urlize($iface), $text{'index_manage'});
+    push @links, &ui_link("peer_create.cgi?iface=".&urlize($iface), "Add Device");
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=restart", $text{'index_restart'});
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=start", $text{'index_start'});
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=stop", $text{'index_stop'});

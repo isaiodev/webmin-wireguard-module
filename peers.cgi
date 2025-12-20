@@ -67,10 +67,8 @@ foreach my $peer (@{$parsed->{peers}}) {
 print &ui_table_end();
 
 if (&can_edit()) {
-    print &ui_form_start("peer_create.cgi", "post");
-    print &ui_hidden("iface", $iface);
-    print &ui_submit($text{'peers_add'});
-    print &ui_form_end();
+    print "<br>";
+    print &ui_link("peer_create.cgi?iface=".&urlize($iface), $text{'peers_add'});
 }
 
 &ui_print_footer("index.cgi", $text{'index_title'});
