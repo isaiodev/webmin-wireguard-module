@@ -92,9 +92,8 @@ if (!@ifaces) {
     exit;
 }
 
-print &ui_table_start($text{'index_interfaces'}, "width=100%", 5);
-print &ui_table_header([ $text{'index_interfaces'}, $text{'index_status'},
-    $text{'index_peers'}, $text{'index_actions'} ]);
+print &ui_table_start($text{'index_interfaces'}, "width=100%", 4);
+print "<tr><th>$text{'index_interfaces'}</th><th>$text{'index_status'}</th><th>$text{'index_peers'}</th><th>$text{'index_actions'}</th></tr>";
 
 foreach my $iface (@ifaces) {
     my $status = '-';

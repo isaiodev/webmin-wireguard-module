@@ -47,6 +47,10 @@ sub safe_cmd {
     return wantarray ? ($code, $out) : $out;
 }
 
+sub can_edit {
+    return !$access{'readonly'};
+}
+
 sub has_command_in_path {
     my ($cmd) = @_;
     return 0 unless $cmd;
