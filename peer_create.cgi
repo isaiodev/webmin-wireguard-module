@@ -15,9 +15,13 @@ my $backend = &detect_backend();
 &error("Write access required") unless &can_edit();
 
 my $path = &get_config_path($backend, $iface);
-&error($text{'config_missing'}) unless $path && -f $path;
-
-my $parsed = &parse_wg_config($path);
+my $parsed;
+if ($backend->{type} eq 'docker') {
+    $parsed = &parse_wg_config_docker($backend, $iface);
+} elsif ($path && -f $path) {
+    $parsed = &parse_wg_config($path);
+}
+&error($text{'config_missing'}) unless $parsed;
 
 my @used_ips;
 foreach my $p (@{$parsed->{peers}}) {
@@ -113,10 +117,22 @@ if ($in{'save'}) {
     print &ui_subheading($text{'peer_added'});
     print &ui_table_start("Client configuration", undef, 1);
     print &ui_table_row("Config", "<pre>".&html_escape($client_conf)."</pre>");
+    
+    # QR Code generation
     if ($config{'enable_qr'} && &has_command('qrencode')) {
-        my $qr = &backquote_command("echo ".&quote_escape($client_conf)." | qrencode -t ASCII 2>/dev/null");
-        if ($qr) {
-            print &ui_table_row("QR", "<pre>".&html_escape($qr)."</pre>");
+        my $qr_cmd = "echo ".&quote_escape($client_conf)." | qrencode -t PNG -o - | base64 -w 0";
+        my $qr_base64 = &backquote_command("$qr_cmd 2>/dev/null");
+        if ($qr_base64 && $? == 0) {
+            chomp $qr_base64;
+            print &ui_table_row("QR Code", 
+                "<button onclick='showQR()' type='button'>Show QR Code</button>".  
+                "<div id='qrModal' style='display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5);'>".
+                "<div style='background-color:white; margin:15% auto; padding:20px; border:1px solid #888; width:300px; text-align:center;'>".
+                "<span onclick='closeQR()' style='color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;'>&times;</span>".
+                "<h3>QR Code for WireGuard Config</h3>".
+                "<img src='data:image/png;base64,$qr_base64' alt='QR Code' style='max-width:250px;'/>".
+                "</div></div>".
+                "<script>function showQR(){document.getElementById('qrModal').style.display='block';} function closeQR(){document.getElementById('qrModal').style.display='none';}</script>");
         }
     }
     print &ui_table_end();

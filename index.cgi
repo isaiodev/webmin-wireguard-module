@@ -146,13 +146,9 @@ foreach my $iface (@ifaces) {
 
     my @links;
     push @links, &ui_link("peers.cgi?iface=".&urlize($iface), $text{'index_manage'});
-    # Always show action buttons for debugging
-    push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=restart", $text{'index_apply'});
+    push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=restart", $text{'index_restart'});
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=start", $text{'index_start'});
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=stop", $text{'index_stop'});
-    # Debug: show can_edit status
-    my $can_edit_status = &can_edit() ? "(editable)" : "(readonly)";
-    push @links, $can_edit_status;
 
     print &ui_table_row($iface, $status, $peer_count, join(" | ", @links));
 }

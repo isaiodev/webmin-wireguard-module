@@ -19,9 +19,13 @@ if ($backend->{type} eq 'none') {
 }
 
 my $path = &get_config_path($backend, $iface);
-&error($text{'config_missing'}) unless $path && -f $path;
-
-my $parsed = &parse_wg_config($path);
+my $parsed;
+if ($backend->{type} eq 'docker') {
+    $parsed = &parse_wg_config_docker($backend, $iface);
+} elsif ($path && -f $path) {
+    $parsed = &parse_wg_config($path);
+}
+&error($text{'config_missing'}) unless $parsed;
 my $stats = &get_peer_stats($backend, $iface);
 
 &ui_print_header(undef, "$text{'peers_title'} $iface", "", undef, 1, 1);

@@ -9,6 +9,25 @@ WEBMIN_CONFIG_DIR="/etc/webmin"
 
 echo "Installing WireGuard module to Webmin..."
 
+# Detect distro and install qrencode
+echo "Checking for qrencode..."
+if ! command -v qrencode >/dev/null 2>&1; then
+    echo "Installing qrencode..."
+    if command -v apt-get >/dev/null 2>&1; then
+        sudo apt-get update && sudo apt-get install -y qrencode
+    elif command -v yum >/dev/null 2>&1; then
+        sudo yum install -y qrencode
+    elif command -v dnf >/dev/null 2>&1; then
+        sudo dnf install -y qrencode
+    elif command -v pacman >/dev/null 2>&1; then
+        sudo pacman -S --noconfirm qrencode
+    else
+        echo "Warning: Could not auto-install qrencode. Please install manually."
+    fi
+else
+    echo "qrencode already installed."
+fi
+
 # Stop Webmin
 echo "Stopping Webmin..."
 sudo systemctl stop webmin 2>/dev/null || sudo /etc/webmin/stop 2>/dev/null || true

@@ -11,6 +11,8 @@ All notable changes to the Webmin WireGuard Module will be documented in this fi
 - **Fixed backend detection**: Corrected logic to properly detect Docker mode when custom config directory is specified
 - **Fixed missing action buttons**: Added missing `urlize` function and fixed backend detection for Docker containers
 - **Fixed action button visibility**: Modified can_edit function to be more permissive and always show action buttons
+- **Fixed missing library functions**: Completed all missing functions (save_config_lines, suggest_next_ip, get_peer_stats, apply_changes, service_action)
+- **Fixed peers.cgi for Docker**: Updated to work with Docker containers using parse_wg_config_docker
 - **Added missing functions**: 
   - `can_edit()` - Checks user write permissions based on Webmin ACL
   - `get_config_path()` - Returns full path to WireGuard interface configuration files
@@ -26,6 +28,9 @@ All notable changes to the Webmin WireGuard Module will be documented in this fi
 - **Docker container name configuration**: Added form field to specify Docker container name (e.g., 'wireguard')
 - **Backend type selection**: Added radio buttons to explicitly choose between Docker Container and Native Linux Installation
 - **Configurable container config path**: Added field to specify where WireGuard config files are located inside the Docker container
+- **QR code generation**: Added QR code modal display for new peer configurations
+- **Auto-install qrencode**: Install script now automatically detects and installs qrencode package
+- **Add new devices/peers**: Full functionality to add new WireGuard peers with client config generation
 
 ### Changed
 - **Backend detection logic**: Modified to use configured directory path for both host and Docker backends instead of separate docker_config_dir
