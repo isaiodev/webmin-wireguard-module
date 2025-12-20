@@ -3,7 +3,7 @@
 set -e
 
 MODULE_NAME="wireguard"
-SOURCE_DIR="/mnt/ia/DEV/webmin-wireguard-module"
+SOURCE_DIR="$(dirname "$(readlink -f "$0")")"
 WEBMIN_MODULES_DIR="/usr/share/webmin"
 WEBMIN_CONFIG_DIR="/etc/webmin"
 
