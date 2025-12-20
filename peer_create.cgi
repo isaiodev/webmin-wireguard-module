@@ -115,7 +115,13 @@ if ($in{'save'}) {
     push @block, "PresharedKey = $preshared" if $preshared;
     push @block, "PersistentKeepalive = $keepalive" if $keepalive;
 
-    &add_peer_block($path, \@block);
+    if ($backend->{type} eq 'docker') {
+        my $lines = $parsed->{lines} || [];
+        my $out = &append_peer_lines($lines, \@block);
+        &error($text{'peer_write_failed'}) unless &write_docker_config($backend, $iface, $out);
+    } else {
+        &add_peer_block($path, \@block);
+    }
 
     # Build client config
     my $server_pub = '';

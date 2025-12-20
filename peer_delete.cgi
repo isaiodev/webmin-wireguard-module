@@ -40,10 +40,22 @@ my $backend = &detect_backend();
 &error("Write access required") unless &can_edit();
 
 my $path = &get_config_path($backend, $iface);
-&error($text{'config_missing'}) unless $path && -f $path;
+if ($backend->{type} eq 'docker') {
+    my $parsed = &parse_wg_config_docker($backend, $iface);
+    &error($text{'config_missing'}) unless $parsed;
+} else {
+    &error($text{'config_missing'}) unless $path && -f $path;
+}
 
 if ($in{'confirm'}) {
-    &delete_peer_block($path, $pubkey);
+    if ($backend->{type} eq 'docker') {
+        my $parsed = &parse_wg_config_docker($backend, $iface);
+        &error($text{'config_missing'}) unless $parsed;
+        my $out = &remove_peer_lines($parsed->{lines} || [], $pubkey);
+        &error($text{'peer_write_failed'}) unless &write_docker_config($backend, $iface, $out);
+    } else {
+        &delete_peer_block($path, $pubkey);
+    }
     my $conf_path = &peer_config_path($iface, $pubkey);
     unlink $conf_path if $conf_path && -f $conf_path;
     &ui_print_header(undef, $text{'peer_delete_title'}, "", undef, 1, 1);

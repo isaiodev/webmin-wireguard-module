@@ -9,6 +9,7 @@ use WebminCore;
 &textdomain('wireguard');
 
 use File::Copy qw(copy);
+use File::Temp qw(tempfile);
 use POSIX qw(strftime);
 use Socket;
 
@@ -291,6 +292,58 @@ sub save_config_lines {
     &flush_file_lines($path);
 }
 
+sub append_peer_lines {
+    my ($lines, $peer_lines) = @_;
+    my @out = @$lines;
+    push @out, '' if @out;
+    push @out, @$peer_lines;
+    return \@out;
+}
+
+sub remove_peer_lines {
+    my ($lines, $pubkey) = @_;
+    my @out;
+    my @buffer;
+    my $match = 0;
+    foreach my $line (@$lines) {
+        if ($line =~ /^\s*\[Peer\]/i) {
+            if (@buffer && !$match) {
+                push @out, @buffer;
+            }
+            @buffer = ($line);
+            $match = 0;
+            next;
+        }
+        if (@buffer) {
+            if ($line =~ /^\s*PublicKey\s*=\s*(.+)$/i) {
+                $match = 1 if $1 eq $pubkey;
+            }
+            push @buffer, $line;
+        } else {
+            push @out, $line;
+        }
+    }
+    if (@buffer && !$match) {
+        push @out, @buffer;
+    }
+    return \@out;
+}
+
+sub write_docker_config {
+    my ($backend, $iface, $lines) = @_;
+    return 0 unless $backend && $backend->{type} eq 'docker';
+    return 0 unless $iface && $lines;
+    my $container_path = $backend->{container_config_path} || '/config';
+    my ($fh, $tmp) = tempfile("wgconfXXXX", DIR => "/tmp", UNLINK => 0);
+    print $fh join("\n", @$lines)."\n";
+    close($fh);
+    my ($code, $out) = &safe_cmd([
+        'docker', 'cp', $tmp, $backend->{container}.":$container_path/$iface.conf"
+    ]);
+    unlink $tmp;
+    return $code == 0;
+}
+
 # Next available /32 from pool
 sub suggest_next_ip {
     my ($pool, $used_ref) = @_;
@@ -391,9 +444,8 @@ sub add_peer_block {
     my ($path, $peer_lines) = @_;
     return 0 unless $path && $peer_lines && @$peer_lines;
     my $lines = &read_file_lines($path);
-    push @$lines, '';
-    push @$lines, @$peer_lines;
-    &save_config_lines($path, $lines);
+    my $out = &append_peer_lines($lines, $peer_lines);
+    &save_config_lines($path, $out);
     return 1;
 }
 
@@ -401,31 +453,8 @@ sub add_peer_block {
 sub delete_peer_block {
     my ($path, $pubkey) = @_;
     my $lines = &read_file_lines($path);
-    my @out;
-    my @buffer;
-    my $match = 0;
-    foreach my $line (@$lines) {
-        if ($line =~ /^\s*\[Peer\]/i) {
-            if (@buffer && !$match) {
-                push @out, @buffer;
-            }
-            @buffer = ($line);
-            $match = 0;
-            next;
-        }
-        if (@buffer) {
-            if ($line =~ /^\s*PublicKey\s*=\s*(.+)$/i) {
-                $match = 1 if $1 eq $pubkey;
-            }
-            push @buffer, $line;
-        } else {
-            push @out, $line;
-        }
-    }
-    if (@buffer && !$match) {
-        push @out, @buffer;
-    }
-    &save_config_lines($path, \@out);
+    my $out = &remove_peer_lines($lines, $pubkey);
+    &save_config_lines($path, $out);
 }
 
 1;

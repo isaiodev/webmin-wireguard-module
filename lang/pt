@@ -38,6 +38,7 @@ pubkey_invalid=Chave pública inválida
 allowedips_invalid=Formato de AllowedIPs inválido
 peer_added=Par adicionado com sucesso
 peer_deleted=Par excluído com sucesso
+peer_write_failed=Falha ao atualizar a configuração do WireGuard
 peer_qr_title=QR code do par
 qr_disabled=QR codes estão desativados na configuração do módulo
 qr_missing=qrencode não está instalado
