@@ -16,10 +16,14 @@ All notable changes to the Webmin WireGuard Module will be documented in this fi
 - **Custom config directory support**: Added configuration form in main interface to specify custom WireGuard config directory
 - **Flexible backend detection**: Updated backend detection to prioritize any existing config directory for both host and Docker modes
 - **Installation script**: Created `install_module.sh` script for proper module installation with automatic path detection
+- **Docker container actions**: Added proper support for linuxserver/wireguard containers with `docker exec` commands
+- **Container status display**: Backend detection now shows container running status
 
 ### Changed
 - **Backend detection logic**: Modified to use configured directory path for both host and Docker backends instead of separate docker_config_dir
 - **Module installation process**: Improved installation script to properly stop/start Webmin and clear module cache
+- **Docker actions**: Implemented `wg-quick up/down` commands via `docker exec` for linuxserver/wireguard containers
+- **Container detection**: Enhanced to specifically detect linuxserver/wireguard containers
 
 ### Technical Details
 - Fixed Perl execution errors that prevented module from loading in Webmin

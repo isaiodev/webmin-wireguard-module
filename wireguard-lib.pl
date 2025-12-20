@@ -119,11 +119,14 @@ sub detect_backend {
                 }
             }
             if ($container) {
+                # Check if container is running
+                my $running = &backquote_command("docker inspect -f '{{.State.Running}}' ".&quote_escape($container)." 2>/dev/null");
+                my $status = ($running =~ /true/) ? 'running' : 'stopped';
                 return {
                     type       => 'docker',
                     container  => $container,
                     config_dir => $cfg_dir,
-                    detail     => "docker ($container)",
+                    detail     => "docker ($container - $status)",
                 };
             }
             else {
@@ -151,7 +154,8 @@ sub list_wireguard_containers {
     return \@out if $? != 0;
     foreach my $line (split(/\n/, $ps)) {
         my ($id, $name, $img, $labels) = split(/\s+/, $line, 4);
-        next unless ($img && $img =~ /wireguard/i) || ($labels && $labels =~ /wireguard/i);
+        # Look for linuxserver/wireguard or any wireguard-related containers
+        next unless ($img && ($img =~ /wireguard/i || $img =~ /linuxserver\/wireguard/i)) || ($labels && $labels =~ /wireguard/i);
         push @out, {
             id     => $id,
             name   => $name,
@@ -330,6 +334,44 @@ sub get_config_path {
 sub apply_changes {
     my ($backend, $iface) = @_;
     return (1, $text{'apply_none'}) if $backend->{type} eq 'none';
+    if ($backend->{type} eq 'host') {
+        return safe_cmd(['/bin/systemctl','restart',"wg-quick\@$iface"]);
+    } else {
+        # For Docker, restart the interface inside the container
+        my ($code, $out) = safe_cmd(['docker','exec',$backend->{container},'wg-quick','down',$iface]);
+        my ($code2, $out2) = safe_cmd(['docker','exec',$backend->{container},'wg-quick','up',$iface]);
+        return ($code2, "$out\n$out2");
+    }
+}
+
+sub service_action {
+    my ($backend, $iface, $action) = @_;
+    return (1, "No backend available") if $backend->{type} eq 'none';
+    
+    if ($backend->{type} eq 'host') {
+        if ($action eq 'start') {
+            return safe_cmd(['/bin/systemctl','start',"wg-quick\@$iface"]);
+        } elsif ($action eq 'stop') {
+            return safe_cmd(['/bin/systemctl','stop',"wg-quick\@$iface"]);
+        } elsif ($action eq 'restart') {
+            return safe_cmd(['/bin/systemctl','restart',"wg-quick\@$iface"]);
+        }
+    } else {
+        # Docker actions
+        if ($action eq 'start') {
+            return safe_cmd(['docker','exec',$backend->{container},'wg-quick','up',$iface]);
+        } elsif ($action eq 'stop') {
+            return safe_cmd(['docker','exec',$backend->{container},'wg-quick','down',$iface]);
+        } elsif ($action eq 'restart') {
+            my ($code, $out) = safe_cmd(['docker','exec',$backend->{container},'wg-quick','down',$iface]);
+            my ($code2, $out2) = safe_cmd(['docker','exec',$backend->{container},'wg-quick','up',$iface]);
+            return ($code2, "$out\n$out2");
+        }
+    }
+    return (1, "Unknown action: $action");
+}
+
+1;e} eq 'none';
     if ($backend->{type} eq 'host') {
         return safe_cmd(['/bin/systemctl','restart',"wg-quick\@$iface"]);
     } else {
