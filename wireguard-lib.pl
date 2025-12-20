@@ -71,6 +71,15 @@ sub detect_backend {
     my $wg_path = '/usr/bin/wg';
     my $systemctl = &has_command_in_path('systemctl') || -x '/bin/systemctl';
 
+    # Always try to use the configured directory if it exists
+    if (-d $cfg_dir) {
+        return {
+            type       => 'host',
+            config_dir => $cfg_dir,
+            detail     => "host ($cfg_dir)",
+        };
+    }
+
     my $host_ok = (-x $wg_path)
         && (-d $cfg_dir)
         && $systemctl;
@@ -109,7 +118,7 @@ sub detect_backend {
                 return {
                     type       => 'docker',
                     container  => $container,
-                    config_dir => $config{'docker_config_dir'},
+                    config_dir => $cfg_dir,
                     detail     => "docker ($container)",
                 };
             }

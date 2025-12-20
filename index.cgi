@@ -19,8 +19,30 @@ if ($in{'docker_container'} && &can_edit()) {
 }
 &ui_print_header(undef, $text{'index_title'}, "", undef, 1, 1);
 
+# Configuration form for custom config directory
+if (&can_edit() && $in{'save_config'}) {
+    if ($in{'config_dir'}) {
+        $config{'config_dir'} = $in{'config_dir'};
+        &save_module_config(\%config);
+        print "<p><b>Configuration saved. Config directory set to: $in{'config_dir'}</b></p>";
+    }
+}
+
 my $backend = &detect_backend();
 print &ui_subheading("$text{'index_backend'}: $backend->{detail}");
+
+# Config directory form
+if (&can_edit()) {
+    print &ui_form_start("index.cgi", "post");
+    print &ui_hidden("save_config", 1);
+    print &ui_table_start("Configuration", undef, 2);
+    print &ui_table_row("WireGuard Config Directory:",
+        &ui_textbox("config_dir", $config{'config_dir'} || '/etc/wireguard', 50));
+    print &ui_table_end();
+    print &ui_submit("Save Configuration");
+    print &ui_form_end();
+    print "<br>";
+}
 my $containers = &list_wireguard_containers();
 
 if (&can_edit() && $backend->{type} eq 'docker' && @$containers) {
