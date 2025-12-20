@@ -303,6 +303,17 @@ sub get_peer_stats {
     return \%stats;
 }
 
+sub get_config_path {
+    my ($backend, $iface) = @_;
+    return undef unless $backend && $iface;
+    if ($backend->{type} eq 'host') {
+        return "$backend->{config_dir}/$iface.conf";
+    } elsif ($backend->{type} eq 'docker' && $backend->{config_dir}) {
+        return "$backend->{config_dir}/$iface.conf";
+    }
+    return undef;
+}
+
 sub apply_changes {
     my ($backend, $iface) = @_;
     return (1, $text{'apply_none'}) if $backend->{type} eq 'none';

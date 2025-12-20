@@ -65,7 +65,7 @@ if ($backend->{type} eq 'none') {
 
 my @ifaces = &list_interfaces($backend);
 if (!@ifaces) {
-    print &ui_text($text{'config_missing'});
+    print "<p>$text{'config_missing'}</p>";
     &ui_print_footer(undef, $text{'index_title'});
     exit;
 }
