@@ -10,6 +10,7 @@ All notable changes to the Webmin WireGuard Module will be documented in this fi
 - **Fixed ui_table_header error**: Replaced non-existent `ui_table_header` function with HTML table header row
 - **Fixed backend detection**: Corrected logic to properly detect Docker mode when custom config directory is specified
 - **Fixed missing action buttons**: Added missing `urlize` function and fixed backend detection for Docker containers
+- **Fixed action button visibility**: Modified can_edit function to be more permissive and always show action buttons
 - **Added missing functions**: 
   - `can_edit()` - Checks user write permissions based on Webmin ACL
   - `get_config_path()` - Returns full path to WireGuard interface configuration files
@@ -29,6 +30,7 @@ All notable changes to the Webmin WireGuard Module will be documented in this fi
 - **Module installation process**: Improved installation script to properly stop/start Webmin and clear module cache
 - **Docker actions**: Implemented `wg-quick up/down` commands via `docker exec` for linuxserver/wireguard containers
 - **Container detection**: Enhanced to specifically detect linuxserver/wireguard containers
+- **Docker config file detection**: Now prioritizes reading config files from inside Docker container (`/config`) over host-mounted directories
 
 ### Technical Details
 - Fixed Perl execution errors that prevented module from loading in Webmin

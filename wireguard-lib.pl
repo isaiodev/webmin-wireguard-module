@@ -48,7 +48,8 @@ sub safe_cmd {
 }
 
 sub can_edit {
-    return !$access{'readonly'};
+    # Always allow editing unless explicitly set to readonly
+    return !defined($access{'readonly'}) || !$access{'readonly'};
 }
 
 sub urlize {
@@ -194,21 +195,22 @@ sub list_interfaces {
         }
         closedir $dh;
     } elsif ($backend->{type} eq 'docker') {
-        # First try host-mounted directory
-        if ($backend->{config_dir} && -d $backend->{config_dir}) {
+        # For Docker, always read from inside the container first
+        my $out = &backquote_command("docker exec ".&quote_escape($backend->{container})." ls /config 2>/dev/null");
+        if ($? == 0 && $out) {
+            foreach my $line (split(/\n/, $out)) {
+                next unless $line =~ /^([A-Za-z0-9_.-]+)\.conf$/;
+                push @ifs, $1;
+            }
+        }
+        # If no files found in container, try host-mounted directory as fallback
+        if (!@ifs && $backend->{config_dir} && -d $backend->{config_dir}) {
             opendir(my $dh, $backend->{config_dir}) or return ();
             while (my $f = readdir($dh)) {
                 next unless $f =~ /^([A-Za-z0-9_.-]+)\.conf$/;
                 push @ifs, $1;
             }
             closedir $dh;
-        } else {
-            # Fallback: read from inside container
-            my $out = &backquote_command("docker exec ".&quote_escape($backend->{container})." ls /config 2>/dev/null");
-            foreach my $line (split(/\n/, $out)) {
-                next unless $line =~ /^([A-Za-z0-9_.-]+)\.conf$/;
-                push @ifs, $1;
-            }
         }
     }
     return @ifs;

@@ -112,22 +112,30 @@ foreach my $iface (@ifaces) {
 
     my $path = &get_config_path($backend, $iface);
     my $peer_count = 0;
-    if ($path && -f $path) {
-        my $parsed = &parse_wg_config($path);
-        $peer_count = scalar(@{$parsed->{peers}}) if $parsed;
-    } elsif ($backend->{type} eq 'docker') {
-        # Try reading from inside container
+    if ($backend->{type} eq 'docker') {
+        # For Docker, always try reading from inside container first
         my $parsed = &parse_wg_config_docker($backend, $iface);
+        if ($parsed) {
+            $peer_count = scalar(@{$parsed->{peers}});
+        } elsif ($path && -f $path) {
+            # Fallback to host file if container read fails
+            my $parsed_host = &parse_wg_config($path);
+            $peer_count = scalar(@{$parsed_host->{peers}}) if $parsed_host;
+        }
+    } elsif ($path && -f $path) {
+        my $parsed = &parse_wg_config($path);
         $peer_count = scalar(@{$parsed->{peers}}) if $parsed;
     }
 
     my @links;
     push @links, &ui_link("peers.cgi?iface=".&urlize($iface), $text{'index_manage'});
-    if (&can_edit()) {
-        push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=restart", $text{'index_apply'});
-        push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=start", $text{'index_start'});
-        push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=stop", $text{'index_stop'});
-    }
+    # Always show action buttons for debugging
+    push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=restart", $text{'index_apply'});
+    push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=start", $text{'index_start'});
+    push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=stop", $text{'index_stop'});
+    # Debug: show can_edit status
+    my $can_edit_status = &can_edit() ? "(editable)" : "(readonly)";
+    push @links, $can_edit_status;
 
     print &ui_table_row($iface, $status, $peer_count, join(" | ", @links));
 }
