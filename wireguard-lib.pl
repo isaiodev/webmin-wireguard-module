@@ -47,6 +47,18 @@ sub safe_cmd {
     return wantarray ? ($code, $out) : $out;
 }
 
+sub has_command_in_path {
+    my ($cmd) = @_;
+    return 0 unless $cmd;
+    # Check if it's an absolute path
+    return -x $cmd if $cmd =~ m{^/};
+    # Search in PATH
+    foreach my $dir (split(/:/, $ENV{'PATH'} || '')) {
+        return 1 if -x "$dir/$cmd";
+    }
+    return 0;
+}
+
 sub has_command {
     my ($cmd) = @_;
     return &has_command_in_path($cmd);
