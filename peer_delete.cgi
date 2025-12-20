@@ -52,8 +52,16 @@ if ($in{'confirm'}) {
         my $parsed = &parse_wg_config_docker($backend, $iface);
         &error($text{'config_missing'}) unless $parsed;
         my $out = &remove_peer_lines($parsed->{lines} || [], $pubkey);
-        &error($text{'peer_write_failed'}) unless &write_docker_config($backend, $iface, $out);
+        if (!&write_docker_config($backend, $iface, $out)) {
+            my $err = &last_error();
+            my $msg = $text{'peer_write_failed'};
+            $msg .= ": $err" if $err;
+            &error($msg);
+        }
     } else {
+        if ($path && !-w $path) {
+            &error($text{'peer_write_failed'}.": $!");
+        }
         &delete_peer_block($path, $pubkey);
     }
     my $conf_path = &peer_config_path($iface, $pubkey);

@@ -14,6 +14,7 @@ use POSIX qw(strftime);
 use Socket;
 
 our $DEFAULT_MODE = 0600;
+our $LAST_ERROR = '';
 
 # Validate an interface name
 sub validate_iface {
@@ -45,6 +46,15 @@ sub safe_cmd {
     my $out = &backquote_command(join(' ', map { &quote_escape($_) } @$cmd_ar));
     my $code = $?;
     return wantarray ? ($code, $out) : $out;
+}
+
+sub set_last_error {
+    my ($err) = @_;
+    $LAST_ERROR = $err || '';
+}
+
+sub last_error {
+    return $LAST_ERROR;
 }
 
 sub can_edit {
@@ -331,17 +341,27 @@ sub remove_peer_lines {
 
 sub write_docker_config {
     my ($backend, $iface, $lines) = @_;
+    &set_last_error('');
     return 0 unless $backend && $backend->{type} eq 'docker';
     return 0 unless $iface && $lines;
     my $container_path = $backend->{container_config_path} || '/config';
     my ($fh, $tmp) = tempfile("wgconfXXXX", DIR => "/tmp", UNLINK => 0);
+    if (!$fh || !$tmp) {
+        &set_last_error("Failed to create temp file");
+        return 0;
+    }
     print $fh join("\n", @$lines)."\n";
     close($fh);
-    my ($code, $out) = &safe_cmd([
-        'docker', 'cp', $tmp, $backend->{container}.":$container_path/$iface.conf"
-    ]);
+    my $dst = $backend->{container}.":$container_path/$iface.conf";
+    my $cmd = "docker cp ".&quote_escape($tmp)." ".&quote_escape($dst)." 2>&1";
+    my $out = &backquote_command($cmd);
+    my $code = $?;
     unlink $tmp;
-    return $code == 0;
+    if ($code != 0) {
+        &set_last_error($out || "docker cp failed");
+        return 0;
+    }
+    return 1;
 }
 
 # Next available /32 from pool

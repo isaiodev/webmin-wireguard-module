@@ -45,13 +45,17 @@ sudo cp -r "$SOURCE_DIR" "$WEBMIN_MODULES_DIR/$MODULE_NAME"
 echo "Setting up configuration..."
 sudo mkdir -p "$WEBMIN_CONFIG_DIR/$MODULE_NAME"
 sudo cp "$SOURCE_DIR/config" "$WEBMIN_CONFIG_DIR/$MODULE_NAME/config"
+sudo mkdir -p "$WEBMIN_CONFIG_DIR/$MODULE_NAME/peer-configs"
 
 # Set proper permissions
 echo "Setting permissions..."
 sudo chown -R root:root "$WEBMIN_MODULES_DIR/$MODULE_NAME"
 sudo chmod -R 755 "$WEBMIN_MODULES_DIR/$MODULE_NAME"
-sudo chmod 644 "$WEBMIN_MODULES_DIR/$MODULE_NAME"/*.cgi
-sudo chmod 644 "$WEBMIN_MODULES_DIR/$MODULE_NAME"/*.pl
+sudo chmod 755 "$WEBMIN_MODULES_DIR/$MODULE_NAME"/*.cgi
+sudo chmod 755 "$WEBMIN_MODULES_DIR/$MODULE_NAME"/*.pl
+sudo chown -R root:root "$WEBMIN_CONFIG_DIR/$MODULE_NAME"
+sudo chmod 700 "$WEBMIN_CONFIG_DIR/$MODULE_NAME/peer-configs"
+sudo chmod 600 "$WEBMIN_CONFIG_DIR/$MODULE_NAME/config"
 
 # Clear module cache
 echo "Clearing module cache..."
