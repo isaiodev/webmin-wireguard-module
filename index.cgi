@@ -7,6 +7,28 @@ our (%text, %config, %in, %access);
 &init_config();
 &ReadParse();
 
+sub peer_config_base_dir {
+    if (defined &get_module_config_directory) {
+        return &get_module_config_directory();
+    }
+    if ($ENV{'WEBMIN_CONFIG'}) {
+        return "$ENV{'WEBMIN_CONFIG'}/wireguard";
+    }
+    return "/etc/webmin/wireguard";
+}
+
+sub peer_config_dir {
+    return peer_config_base_dir()."/peer-configs";
+}
+
+sub peer_config_path {
+    my ($iface_name, $key) = @_;
+    return undef unless $iface_name && $key;
+    my $safe = $key;
+    $safe =~ s/[^A-Za-z0-9_.-]/_/g;
+    return peer_config_dir()."/$iface_name-$safe.conf";
+}
+
 # Allow selecting Docker container when applicable
 if ($in{'docker_container'} && &can_edit()) {
     my $containers = &list_wireguard_containers();
@@ -145,7 +167,8 @@ foreach my $iface (@ifaces) {
     }
 
     my @links;
-    push @links, &ui_link("peer_create.cgi?iface=".&urlize($iface), "Add Device");
+    push @links, &ui_link("peers.cgi?iface=".&urlize($iface), $text{'index_manage'});
+    push @links, &ui_link("peer_create.cgi?iface=".&urlize($iface), $text{'peers_add'});
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=restart", $text{'index_restart'});
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=start", $text{'index_start'});
     push @links, &ui_link("apply.cgi?iface=".&urlize($iface)."&action=stop", $text{'index_stop'});
@@ -160,6 +183,11 @@ foreach my $iface (@ifaces) {
     print "<br>";
     print &ui_subheading("Peers for $iface");
     
+    if (&can_edit()) {
+        print &ui_link("peer_create.cgi?iface=".&urlize($iface), $text{'peers_add'});
+        print "<br><br>";
+    }
+
     my $parsed;
     if ($backend->{type} eq 'docker') {
         $parsed = &parse_wg_config_docker($backend, $iface);
@@ -169,15 +197,28 @@ foreach my $iface (@ifaces) {
     }
     
     if ($parsed && @{$parsed->{peers}}) {
+        my $qr_enabled = $config{'enable_qr'} && &has_command('qrencode');
         print &ui_table_start("Peers", "width=100%", 4);
         print "<tr><th>Name</th><th>Public Key</th><th>Allowed IPs</th><th>Actions</th></tr>";
         
         foreach my $peer (@{$parsed->{peers}}) {
-            my $name = $peer->{'Name'} || 'Unnamed';
+            my $peer_name = $peer->{'Name'} || '';
+            my $name = $peer_name || 'Unnamed';
             my $pubkey = substr($peer->{'PublicKey'} || '', 0, 20) . '...';
             my $allowed = $peer->{'AllowedIPs'} || '';
-            my $delete_link = &ui_link("peer_delete.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'}), "Delete");
-            print &ui_table_row($name, $pubkey, $allowed, $delete_link);
+            my @actions;
+            if (&can_edit()) {
+                push @actions, &ui_link("peer_delete.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'}), $text{'peers_delete'});
+            }
+            my $conf_path = &peer_config_path($iface, $peer->{'PublicKey'});
+            if ($conf_path && -f $conf_path) {
+                push @actions, &ui_link("peer_download.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."&name=".&urlize($peer_name), $text{'peers_download'});
+                if ($qr_enabled) {
+                    push @actions, &ui_link("peer_qr.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($peer->{'PublicKey'})."&name=".&urlize($peer_name), $text{'peers_qr'});
+                }
+            }
+            my $actions = @actions ? join(" | ", @actions) : '-';
+            print &ui_table_row($name, $pubkey, $allowed, $actions);
         }
         print &ui_table_end();
     } else {

@@ -13,6 +13,28 @@ if (!&validate_iface($iface)) {
     &error($text{'iface_invalid'});
 }
 
+sub peer_config_base_dir {
+    if (defined &get_module_config_directory) {
+        return &get_module_config_directory();
+    }
+    if ($ENV{'WEBMIN_CONFIG'}) {
+        return "$ENV{'WEBMIN_CONFIG'}/wireguard";
+    }
+    return "/etc/webmin/wireguard";
+}
+
+sub peer_config_dir {
+    return peer_config_base_dir()."/peer-configs";
+}
+
+sub peer_config_path {
+    my ($iface_name, $key) = @_;
+    return undef unless $iface_name && $key;
+    my $safe = $key;
+    $safe =~ s/[^A-Za-z0-9_.-]/_/g;
+    return peer_config_dir()."/$iface_name-$safe.conf";
+}
+
 my $backend = &detect_backend();
 if ($backend->{type} eq 'none') {
     &error($text{'backend_none'});
@@ -50,6 +72,7 @@ print &ui_table_header([ $text{'peers_name'}, $text{'peers_publickey'},
     $text{'peers_last_handshake'}, $text{'peers_rx'}, $text{'peers_tx'},
     $text{'index_actions'} ]);
 
+my $qr_enabled = $config{'enable_qr'} && &has_command('qrencode');
 foreach my $peer (@{$parsed->{peers}}) {
     my $pub = $peer->{'PublicKey'} || '';
     my $name = $peer->{'Name'} || '';
@@ -59,9 +82,18 @@ foreach my $peer (@{$parsed->{peers}}) {
     my $hs = $stat->{'last_handshake'} || '';
     my $rx = $stat->{'rx'} || '';
     my $tx = $stat->{'tx'} || '';
-    my $action = &can_edit()
-        ? &ui_link("peer_delete.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($pub), $text{'peers_delete'})
-        : '-';
+    my @actions;
+    if (&can_edit()) {
+        push @actions, &ui_link("peer_delete.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($pub), $text{'peers_delete'});
+    }
+    my $conf_path = &peer_config_path($iface, $pub);
+    if ($conf_path && -f $conf_path) {
+        push @actions, &ui_link("peer_download.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($pub)."&name=".&urlize($name), $text{'peers_download'});
+        if ($qr_enabled) {
+            push @actions, &ui_link("peer_qr.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($pub)."&name=".&urlize($name), $text{'peers_qr'});
+        }
+    }
+    my $action = @actions ? join(" | ", @actions) : '-';
     print &ui_table_row($name, $pub, $allowed, $endpoint, $hs, $rx, $tx, $action);
 }
 print &ui_table_end();
