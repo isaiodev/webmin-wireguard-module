@@ -5,6 +5,7 @@ use warnings;
 our (%text, %config, %access, %in);
 BEGIN { push(@INC, ".."); }
 use WebminCore;
+require 'web-lib.pl';
 &init_config();
 &textdomain('wireguard');
 
