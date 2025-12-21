@@ -35,9 +35,10 @@ ListenPort = $listen_port
 EOF
 
 &lock_file($conf_path);
-&open_tempfile(CONF, ">$conf_path");
-&print_tempfile(CONF, $conf_content);
-&close_tempfile(CONF);
+my $fh;
+&open_tempfile($fh, ">$conf_path");
+&print_tempfile($fh, $conf_content);
+&close_tempfile($fh);
 &unlock_file($conf_path);
 
 &webmin_log("create", "iface", $iface_name);
