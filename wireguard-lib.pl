@@ -45,7 +45,7 @@ sub validate_allowed_ips {
 sub safe_cmd {
     my ($cmd_ar) = @_;
     my $out = &backquote_command(join(' ', map { &quote_escape($_) } @$cmd_ar));
-    my $code = $?;
+    my $code = $? >> 8;
     return wantarray ? ($code, $out) : $out;
 }
 
