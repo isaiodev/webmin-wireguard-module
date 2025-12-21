@@ -544,7 +544,7 @@ sub read_file_lines {
     my ($file) = @_;
     my @lines;
     my $fh;
-    if (&open_readfile($fh, $file)) {
+    if (open($fh, "<", $file)) {
         @lines = <$fh>;
         close($fh);
     }
