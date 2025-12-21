@@ -5,6 +5,7 @@ All notable changes to the Webmin WireGuard Module will be documented in this fi
 ## [Unreleased] - 2024-12-20
 
 ### Fixed
+- **Peer creation/listing and downloads**: Aligned peer config file paths with sanitized public keys and ensured new peer blocks append with proper line breaks so peers parse and display correctly.
 - **QR code generation**: Fixed a bug where the QR code for a peer was not displayed. This was caused by the client-side configuration file not being created. The fix involved adding functions to `wireguard-lib.pl` to create, update, and delete the client-side configuration files, and then calling these functions from `peer_create.cgi`, `peer_edit.cgi`, and `peer_delete.cgi`.
 - **Fixed undefined subroutine errors**: Added missing `has_command_in_path` function with fallback implementation for PATH searching
 - **Fixed ui_text error**: Replaced non-existent `ui_text` function with simple HTML print statement

@@ -305,8 +305,22 @@ sub save_config_lines {
 
 sub append_peer_lines {
     my ($lines, $peer_lines) = @_;
+    my $has_newlines = 0;
+    foreach my $l (@$lines) {
+        if (defined $l && $l =~ /\n\z/) {
+            $has_newlines = 1;
+            last;
+        }
+    }
     my @out = @$lines;
-    push @out, '' if @out;
+    push @out, ($has_newlines ? "\n" : '') if @out;
+    if ($has_newlines) {
+        foreach my $pl (@$peer_lines) {
+            if (defined $pl && $pl !~ /\n\z/) {
+                $pl .= "\n";
+            }
+        }
+    }
     push @out, @$peer_lines;
     return \@out;
 }
