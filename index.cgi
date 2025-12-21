@@ -191,8 +191,9 @@ print "<div style='background-color:white; margin:10% auto; padding:20px; border
 print "<span onclick='closeQR()' style='color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;'>&times;</span>";
 print "<h3 id='qrTitle'>QR Code</h3>";
 print "<img id='qrImg' src='' alt='QR Code' style='max-width:260px;'/>";
+print "<div id='qrMsg' style='display:none; margin-top:10px; color:#b00;'></div>";
 print "</div></div>";
-print "<script>function showQR(url,title){var m=document.getElementById('qrModal');var i=document.getElementById('qrImg');var t=document.getElementById('qrTitle');i.src=url;t.textContent=title||'QR Code';m.style.display='block';} function closeQR(){document.getElementById('qrModal').style.display='none';document.getElementById('qrImg').src='';}</script>";
+print "<script>function showQR(url,title){var m=document.getElementById('qrModal');var i=document.getElementById('qrImg');var t=document.getElementById('qrTitle');var msg=document.getElementById('qrMsg');msg.style.display='none';msg.textContent='';i.style.display='inline';i.onerror=function(){msg.textContent='QR code not available for this peer.';msg.style.display='block';i.style.display='none';};i.src=url;t.textContent=title||'QR Code';m.style.display='block';} function closeQR(){document.getElementById('qrModal').style.display='none';document.getElementById('qrImg').src='';}</script>";
 
 foreach my $iface (@ifaces) {
     print "<br>";

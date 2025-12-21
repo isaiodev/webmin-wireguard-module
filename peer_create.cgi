@@ -10,35 +10,6 @@ our (%text, %config, %in, %access);
 my $iface = $in{'iface'};
 &error($text{'iface_invalid'}) unless &validate_iface($iface);
 
-sub peer_config_base_dir {
-    if (defined &get_module_config_directory) {
-        return &get_module_config_directory();
-    }
-    if ($ENV{'WEBMIN_CONFIG'}) {
-        return "$ENV{'WEBMIN_CONFIG'}/wireguard";
-    }
-    return "/etc/webmin/wireguard";
-}
-
-sub peer_config_dir {
-    my ($create) = @_;
-    my $base = peer_config_base_dir();
-    my $dir = "$base/peer-configs";
-    if ($create) {
-        mkdir $base, 0755 if $base && !-d $base;
-        mkdir $dir, 0700 if $dir && !-d $dir;
-    }
-    return $dir;
-}
-
-sub peer_config_path {
-    my ($iface_name, $key, $create) = @_;
-    return undef unless $iface_name && $key;
-    my $safe = $key;
-    $safe =~ s/[^A-Za-z0-9_.-]/_/g;
-    return peer_config_dir($create)."/$iface_name-$safe.conf";
-}
-
 my $backend = &detect_backend();
 &error($text{'backend_none'}) if $backend->{type} eq 'none';
 &error("Write access required") unless &can_edit();
@@ -131,38 +102,32 @@ if ($in{'save'}) {
         &add_peer_block($path, \@block);
     }
 
-    # Build client config
+    # Build and save client config
     my $server_pub = '';
     if (my $int_priv = $parsed->{interface}->{'PrivateKey'}) {
         my $cmd = "/bin/sh -c 'echo ".&quote_escape($int_priv)." | /usr/bin/wg pubkey'";
         $server_pub = &backquote_command("$cmd 2>/dev/null");
         chomp $server_pub;
     }
-    my $endpoint = $config{'default_endpoint'} || '';
-    my $dns = $config{'default_dns'} || '';
-    my $client_allowed = $config{'default_client_allowed_ips'} || '0.0.0.0/0';
 
-    my @client;
-    push @client, "[Interface]";
-    push @client, "PrivateKey = $client_priv";
-    push @client, "Address = ".$in{'allowedips'};
-    push @client, "DNS = $dns" if $dns;
-    push @client, "";
-    push @client, "[Peer]";
-    push @client, "PublicKey = $server_pub" if $server_pub;
-    push @client, "AllowedIPs = $client_allowed";
-    push @client, "Endpoint = $endpoint" if $endpoint;
-    push @client, "PersistentKeepalive = $keepalive" if $keepalive;
+    my %server_data = (
+        'PublicKey' => $server_pub,
+        'Endpoint'  => $config{'default_endpoint'} || '',
+    );
+    my %peer_data = (
+        'PrivateKey'   => $client_priv,
+        'PublicKey'    => $client_pub,
+        'AllowedIPs'   => $in{'allowedips'},
+        'PresharedKey' => $preshared,
+        'DNS'          => $config{'default_dns'} || '',
+    );
 
-    my $client_conf = join("\n", @client)."\n";
-    my $peer_conf_path = &peer_config_path($iface, $client_pub, 1);
-    if ($peer_conf_path) {
-        if (open(my $pfh, '>', $peer_conf_path)) {
-            print $pfh $client_conf;
-            close($pfh);
-            chmod 0600, $peer_conf_path;
-        }
+    if (!&create_peer_config_file($iface, \%peer_data, \%server_data)) {
+        &error($text{'peer_config_write_failed'});
     }
+
+    my $client_conf_path = &get_peer_config_path($iface, $client_pub);
+    my $client_conf = &read_file_contents($client_conf_path);
 
     &ui_print_header(undef, $text{'peer_create_title'}, "", undef, 1, 1);
     print &ui_subheading("$text{'peer_create_title'} - Step 2 of 2");
@@ -187,7 +152,7 @@ if ($in{'save'}) {
         }
     }
     print &ui_table_end();
-    if ($peer_conf_path && -f $peer_conf_path) {
+    if ($client_conf_path && -f $client_conf_path) {
         print "<br>";
         print &ui_link("peer_download.cgi?iface=".&urlize($iface)."&pubkey=".&urlize($client_pub)."&name=".&urlize($in{'name'} || ''), $text{'peers_download'});
     }

@@ -416,6 +416,16 @@ sub get_peer_stats {
     return \%stats;
 }
 
+sub get_peer_config_path {
+    my ($iface, $pubkey) = @_;
+    return undef unless $iface && $pubkey;
+
+    my $dir = "/etc/webmin/wireguard/peer-configs";
+    my $path = "$dir/$iface-$pubkey.conf";
+
+    return $path;
+}
+
 sub get_config_path {
     my ($backend, $iface) = @_;
     return undef unless $backend && $iface;
@@ -464,6 +474,51 @@ sub service_action {
         }
     }
     return (1, "Unknown action: $action");
+}
+
+# Create a client-side config file for a peer
+sub create_peer_config_file {
+    my ($iface, $peer, $server) = @_;
+    return 0 unless $iface && $peer && $server;
+
+    my $dir = "/etc/webmin/wireguard/peer-configs";
+    if (!-d $dir) {
+        &make_dir($dir, 0755);
+    }
+
+    my $path = "$dir/$iface-$peer->{'PublicKey'}.conf";
+    my @lines;
+    push @lines, "[Interface]";
+    push @lines, "PrivateKey = $peer->{'PrivateKey'}";
+    push @lines, "Address = $peer->{'AllowedIPs'}";
+    if ($peer->{'DNS'}) {
+        push @lines, "DNS = $peer->{'DNS'}";
+    }
+    push @lines, "";
+    push @lines, "[Peer]";
+    push @lines, "PublicKey = $server->{'PublicKey'}";
+    if ($peer->{'PresharedKey'}) {
+        push @lines, "PresharedKey = $peer->{'PresharedKey'}";
+    }
+    push @lines, "Endpoint = $server->{'Endpoint'}";
+    push @lines, "AllowedIPs = 0.0.0.0/0";
+
+    &save_config_lines($path, \@lines);
+    return 1;
+}
+
+sub delete_peer_config_file {
+    my ($iface, $pubkey) = @_;
+    return 0 unless $iface && $pubkey;
+
+    my $dir = "/etc/webmin/wireguard/peer-configs";
+    my $path = "$dir/$iface-$pubkey.conf";
+
+    if (-f $path) {
+        unlink $path;
+    }
+
+    return 1;
 }
 
 # Create a new peer block

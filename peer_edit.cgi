@@ -71,6 +71,35 @@ if ($in{'save'}) {
         &save_config_lines($path, $out);
     }
 
+    my $client_priv_key;
+    my $peer_conf_path = &get_peer_config_path($iface, $pubkey);
+    if (-f $peer_conf_path) {
+        my $client_config_content = &read_file_contents($peer_conf_path);
+        if ($client_config_content =~ /PrivateKey\s*=\s*(.*)/) {
+            $client_priv_key = $1;
+        }
+    }
+
+    my %peer_data = (
+        'PrivateKey'   => $client_priv_key,
+        'PublicKey'    => $pubkey,
+        'AllowedIPs'   => $in{'allowedips'},
+        'PresharedKey' => $in{'preshared'},
+        'DNS'          => $config{'default_dns'} || '',
+    );
+    my $server_pub = '';
+    if (my $int_priv = $parsed->{interface}->{'PrivateKey'}) {
+        my $cmd = "/bin/sh -c 'echo ".&quote_escape($int_priv)." | /usr/bin/wg pubkey'";
+        $server_pub = &backquote_command("$cmd 2>/dev/null");
+        chomp $server_pub;
+    }
+    my %server_data = (
+        'PublicKey' => $server_pub,
+        'Endpoint'  => $config{'default_endpoint'} || '',
+    );
+
+    &create_peer_config_file($iface, \%peer_data, \%server_data);
+
     &ui_print_header(undef, $text{'peer_edit_title'}, "", undef, 1, 1);
     print &ui_subheading($text{'peer_updated'});
     print &ui_link("peers.cgi?iface=".&urlize($iface), $text{'peers_back'});

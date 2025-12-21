@@ -13,28 +13,6 @@ my $pubkey = $in{'pubkey'};
 &error($text{'iface_invalid'}) unless &validate_iface($iface);
 &error($text{'pubkey_invalid'}) unless &validate_key($pubkey);
 
-sub peer_config_base_dir {
-    if (defined &get_module_config_directory) {
-        return &get_module_config_directory();
-    }
-    if ($ENV{'WEBMIN_CONFIG'}) {
-        return "$ENV{'WEBMIN_CONFIG'}/wireguard";
-    }
-    return "/etc/webmin/wireguard";
-}
-
-sub peer_config_dir {
-    return peer_config_base_dir()."/peer-configs";
-}
-
-sub peer_config_path {
-    my ($iface_name, $key) = @_;
-    return undef unless $iface_name && $key;
-    my $safe = $key;
-    $safe =~ s/[^A-Za-z0-9_.-]/_/g;
-    return peer_config_dir()."/$iface_name-$safe.conf";
-}
-
 my $backend = &detect_backend();
 &error($text{'backend_none'}) if $backend->{type} eq 'none';
 &error("Write access required") unless &can_edit();
@@ -64,8 +42,7 @@ if ($in{'confirm'}) {
         }
         &delete_peer_block($path, $pubkey);
     }
-    my $conf_path = &peer_config_path($iface, $pubkey);
-    unlink $conf_path if $conf_path && -f $conf_path;
+    &delete_peer_config_file($iface, $pubkey);
     &ui_print_header(undef, $text{'peer_delete_title'}, "", undef, 1, 1);
     print &ui_subheading($text{'peer_deleted'});
     print &ui_link("peers.cgi?iface=".&urlize($iface), $text{'peers_back'});

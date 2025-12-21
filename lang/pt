@@ -34,6 +34,7 @@ peer_delete_confirm=Tem certeza que deseja excluir este par?
 apply_none=Nenhum backend disponível
 config_missing=Arquivo de configuração não encontrado
 peer_config_missing=Configuração do cliente não encontrada para este par
+peer_config_write_failed=Falha ao salvar a configuração do cliente
 peer_not_found=Par não encontrado
 backend_none=Nenhum backend utilizável detectado.
 backend_host=host (wg + wg-quick)
