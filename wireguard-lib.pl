@@ -548,6 +548,9 @@ sub read_file_lines {
         @lines = <$fh>;
         close($fh);
     }
+    else {
+        &error("Failed to open file: $file - $!");
+    }
     return \@lines;
 }
 
