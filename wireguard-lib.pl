@@ -529,8 +529,7 @@ sub delete_peer_config_file {
     my ($iface, $pubkey) = @_;
     return 0 unless $iface && $pubkey;
 
-    my $dir = &get_peer_configs_dir();
-    my $path = "$dir/$iface-$pubkey.conf";
+    my $path = &get_peer_config_path($iface, $pubkey);
 
     if (-f $path) {
         unlink $path;

@@ -14,17 +14,7 @@ my $name = $in{'name'} || '';
 &error($text{'iface_invalid'}) unless &validate_iface($iface);
 &error($text{'pubkey_invalid'}) unless &validate_key($pubkey);
 
-my $base;
-if (defined &get_module_config_directory) {
-    $base = &get_module_config_directory();
-}
-elsif ($ENV{'WEBMIN_CONFIG'}) {
-    $base = "$ENV{'WEBMIN_CONFIG'}/wireguard";
-}
-else {
-    $base = "/etc/webmin/wireguard";
-}
-my $conf_path = "$base/peer-configs/$iface-$pubkey.conf";
+my $conf_path = &get_peer_config_path($iface, $pubkey);
 
 &webmin_log("download_peer", "iface", $iface);
 &webmin_log("download_peer", "pubkey", $pubkey);
