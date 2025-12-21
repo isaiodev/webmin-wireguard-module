@@ -131,7 +131,16 @@ if ($backend->{type} eq 'none') {
 
 my @ifaces = &list_interfaces($backend);
 if (!@ifaces) {
-    print "<p>$text{'config_missing'}</p>";
+    print &ui_subheading($text{'config_missing'});
+    print "<p>$text{'config_create_prompt'}</p>";
+    print &ui_form_start("create_interface.cgi", "post");
+    print &ui_table_start("Create New Interface", undef, 2);
+    print &ui_table_row("Interface Name", &ui_textbox("iface_name", "wg0", 20));
+    print &ui_table_row("Listen Port", &ui_textbox("listen_port", "51820", 10));
+    print &ui_table_row("VPN IP Address", &ui_textbox("vpn_ip", "10.0.0.1/24", 30));
+    print &ui_table_end();
+    print &ui_submit("Create Interface");
+    print &ui_form_end();
     &ui_print_footer(undef, $text{'index_title'});
     exit;
 }

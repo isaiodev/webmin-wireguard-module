@@ -20,6 +20,7 @@ All notable changes to the Webmin WireGuard Module will be documented in this fi
   - `urlize()` - URL encodes interface names for links
 
 ### Added
+- **Configuration Wizard**: When no configuration is found, a wizard is now displayed to guide the user in creating their first WireGuard interface.
 - **Custom config directory support**: Added configuration form in main interface to specify custom WireGuard config directory
 - **Flexible backend detection**: Updated backend detection to prioritize any existing config directory for both host and Docker modes
 - **Installation script**: Created `install_module.sh` script for proper module installation with automatic path detection
