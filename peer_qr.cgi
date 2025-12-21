@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use MIME::Base64 qw(decode_base64);
+use MIME::Base64 qw(encode_base64);
 
 do 'wireguard-lib.pl';
 our (%text, %config, %in, %access);
@@ -25,16 +25,15 @@ local $/;
 my $client_conf = <$fh>;
 close($fh);
 
-my $qr_cmd = "echo ".&quote_escape($client_conf)." | qrencode -t PNG -o - | base64 -w 0";
-my $qr_base64 = &backquote_command("$qr_cmd 2>/dev/null");
-&error($text{'qr_failed'}) if !$qr_base64 || $? != 0;
-chomp $qr_base64;
+my $png = &generate_qr_png($client_conf);
+&error($text{'qr_failed'}) unless $png;
 
 if ($in{'raw'}) {
     print "Content-Type: image/png\n\n";
-    print decode_base64($qr_base64);
+    print $png;
     exit;
 }
+my $qr_base64 = encode_base64($png, '');
 
 my $title = $name ? "$text{'peer_qr_title'} $name" : $text{'peer_qr_title'};
 &ui_print_header(undef, $title, "", undef, 1, 1);

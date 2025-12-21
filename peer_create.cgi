@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use MIME::Base64 qw(encode_base64);
 
 do 'wireguard-lib.pl';
 our (%text, %config, %in, %access);
@@ -119,6 +120,7 @@ if ($in{'save'}) {
         'PublicKey'    => $client_pub,
         'AllowedIPs'   => $in{'allowedips'},
         'PresharedKey' => $preshared,
+        'PersistentKeepalive' => $keepalive,
         'DNS'          => $config{'default_dns'} || '',
     );
 
@@ -135,11 +137,10 @@ if ($in{'save'}) {
     print &ui_table_row("Config", "<pre>".&html_escape($client_conf)."</pre>");
     
     # QR Code generation
-    if ($client_conf && $config{'enable_qr'} && &has_command('qrencode')) {
-        my $qr_cmd = "echo ".&quote_escape($client_conf)." | qrencode -t PNG -o - | base64 -w 0";
-        my $qr_base64 = &backquote_command("$qr_cmd 2>/dev/null");
-        if ($qr_base64 && $? == 0) {
-            chomp $qr_base64;
+    if ($client_conf && $config{'enable_qr'}) {
+        my $png = &generate_qr_png($client_conf);
+        if ($png) {
+            my $qr_base64 = encode_base64($png, '');
             print &ui_table_row("QR Code", 
                 "<button onclick='showQR()' type='button'>Show QR Code</button>".  
                 "<div id='qrModal' style='display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5);'>".

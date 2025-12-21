@@ -85,6 +85,7 @@ if ($in{'save'}) {
         'PublicKey'    => $pubkey,
         'AllowedIPs'   => $in{'allowedips'},
         'PresharedKey' => $in{'preshared'},
+        'PersistentKeepalive' => $in{'keepalive'},
         'DNS'          => $config{'default_dns'} || '',
     );
     my $server_pub = '';
@@ -93,9 +94,10 @@ if ($in{'save'}) {
         $server_pub = &backquote_command("$cmd 2>/dev/null");
         chomp $server_pub;
     }
+    my $endpoint = $in{'endpoint'} || $peer->{'Endpoint'} || $config{'default_endpoint'} || '';
     my %server_data = (
         'PublicKey' => $server_pub,
-        'Endpoint'  => $config{'default_endpoint'} || '',
+        'Endpoint'  => $endpoint,
     );
 
     &create_peer_config_file($iface, \%peer_data, \%server_data);

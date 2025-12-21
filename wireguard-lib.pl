@@ -84,6 +84,22 @@ sub has_command {
     return &has_command_in_path($cmd);
 }
 
+sub generate_qr_png {
+    my ($text) = @_;
+    return undef unless defined $text && $text ne '';
+    return undef unless &has_command('qrencode');
+    my ($fh, $tmp) = tempfile("wgqrXXXX", DIR => "/tmp", UNLINK => 0);
+    return undef unless $fh && $tmp;
+    print $fh $text;
+    close($fh);
+    my $cmd = "qrencode -t PNG -o - -r ".&quote_escape($tmp)." 2>/dev/null";
+    my $png = &backquote_command($cmd);
+    my $code = $?;
+    unlink $tmp;
+    return undef if $code != 0 || !$png;
+    return $png;
+}
+
 # Backend detection
 sub detect_backend {
     my %diag;
@@ -533,7 +549,11 @@ sub create_peer_config_file {
         push @lines, "PresharedKey = $peer->{'PresharedKey'}\n";
     }
     push @lines, "Endpoint = $server->{'Endpoint'}\n";
-    push @lines, "AllowedIPs = 0.0.0.0/0\n";
+    my $client_allowed = $config{'default_client_allowed_ips'} || '0.0.0.0/0';
+    push @lines, "AllowedIPs = $client_allowed\n";
+    if ($peer->{'PersistentKeepalive'}) {
+        push @lines, "PersistentKeepalive = $peer->{'PersistentKeepalive'}\n";
+    }
 
     &save_config_lines($path, \@lines);
     return 1;
