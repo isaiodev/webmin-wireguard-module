@@ -502,6 +502,7 @@ sub create_peer_config_file {
     }
 
     my $path = "$dir/$iface-$peer->{'PublicKey'}.conf";
+    &webmin_log("create_peer_config", "path", $path);
     my @lines;
     push @lines, "[Interface]";
     push @lines, "PrivateKey = $peer->{'PrivateKey'}";

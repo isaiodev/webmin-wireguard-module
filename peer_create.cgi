@@ -110,9 +110,11 @@ if ($in{'save'}) {
         chomp $server_pub;
     }
 
+    my $listen_port = $parsed->{interface}->{'ListenPort'} || '51820';
+    my $host = &get_my_address();
     my %server_data = (
         'PublicKey' => $server_pub,
-        'Endpoint'  => $config{'default_endpoint'} || '',
+        'Endpoint'  => $config{'default_endpoint'} || "$host:$listen_port",
     );
     my %peer_data = (
         'PrivateKey'   => $client_priv,
