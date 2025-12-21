@@ -417,11 +417,25 @@ sub get_peer_stats {
     return \%stats;
 }
 
+sub get_peer_configs_dir {
+    my $base;
+    if (defined &get_module_config_directory) {
+        $base = &get_module_config_directory();
+    }
+    elsif ($ENV{'WEBMIN_CONFIG'}) {
+        $base = "$ENV{'WEBMIN_CONFIG'}/wireguard";
+    }
+    else {
+        $base = "/etc/webmin/wireguard";
+    }
+    return "$base/peer-configs";
+}
+
 sub get_peer_config_path {
     my ($iface, $pubkey) = @_;
     return undef unless $iface && $pubkey;
 
-    my $dir = "/etc/webmin/wireguard/peer-configs";
+    my $dir = &get_peer_configs_dir();
     my $path = "$dir/$iface-$pubkey.conf";
 
     return $path;
@@ -482,7 +496,7 @@ sub create_peer_config_file {
     my ($iface, $peer, $server) = @_;
     return 0 unless $iface && $peer && $server;
 
-    my $dir = "/etc/webmin/wireguard/peer-configs";
+    my $dir = &get_peer_configs_dir();
     if (!-d $dir) {
         &make_dir($dir, 0755);
     }
@@ -512,7 +526,7 @@ sub delete_peer_config_file {
     my ($iface, $pubkey) = @_;
     return 0 unless $iface && $pubkey;
 
-    my $dir = "/etc/webmin/wireguard/peer-configs";
+    my $dir = &get_peer_configs_dir();
     my $path = "$dir/$iface-$pubkey.conf";
 
     if (-f $path) {
@@ -552,6 +566,18 @@ sub read_file_lines {
         &error("Failed to open file: $file - $!");
     }
     return \@lines;
+}
+
+sub read_file_contents {
+    my ($file) = @_;
+    my $fh;
+    if (open($fh, "<", $file)) {
+        local $/;
+        my $content = <$fh>;
+        close($fh);
+        return $content;
+    }
+    return undef;
 }
 
 sub write_file_lines {
