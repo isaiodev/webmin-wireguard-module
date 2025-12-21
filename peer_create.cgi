@@ -110,11 +110,9 @@ if ($in{'save'}) {
         chomp $server_pub;
     }
 
-    my $listen_port = $parsed->{interface}->{'ListenPort'} || '51820';
-    my $host = &get_my_address();
     my %server_data = (
         'PublicKey' => $server_pub,
-        'Endpoint'  => $config{'default_endpoint'} || "$host:$listen_port",
+        'Endpoint'  => $in{'endpoint'},
     );
     my %peer_data = (
         'PrivateKey'   => $client_priv,
@@ -137,7 +135,7 @@ if ($in{'save'}) {
     print &ui_table_row("Config", "<pre>".&html_escape($client_conf)."</pre>");
     
     # QR Code generation
-    if ($config{'enable_qr'} && &has_command('qrencode')) {
+    if ($client_conf && $config{'enable_qr'} && &has_command('qrencode')) {
         my $qr_cmd = "echo ".&quote_escape($client_conf)." | qrencode -t PNG -o - | base64 -w 0";
         my $qr_base64 = &backquote_command("$qr_cmd 2>/dev/null");
         if ($qr_base64 && $? == 0) {
@@ -173,6 +171,11 @@ print "<p>Enter peer details, then review and download the client configuration.
 print &ui_form_start("peer_create.cgi", "post");
 print &ui_hidden("iface", $iface);
 print &ui_table_start($text{'peer_create_title'}, undef, 2);
+my $listen_port = $parsed->{interface}->{'ListenPort'} || '51820';
+my $host = defined(&get_my_address) ? &get_my_address() : 'YOUR_SERVER_IP';
+my $default_endpoint = $config{'default_endpoint'} || "$host:$listen_port";
+print &ui_table_row("Endpoint",
+    &ui_textbox("endpoint", $default_endpoint, 40)."<br><i>This is the public IP address and port of your server. It must be correct for the client to connect.</i>");
 print &ui_table_row($text{'peers_name'},
     &ui_textbox("name", "", 40));
 print &ui_table_row($text{'peers_allowedips'},

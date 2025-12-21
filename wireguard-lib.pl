@@ -504,20 +504,20 @@ sub create_peer_config_file {
     my $path = "$dir/$iface-$peer->{'PublicKey'}.conf";
     &webmin_log("create_peer_config", "path", $path);
     my @lines;
-    push @lines, "[Interface]";
-    push @lines, "PrivateKey = $peer->{'PrivateKey'}";
-    push @lines, "Address = $peer->{'AllowedIPs'}";
+    push @lines, "[Interface]\n";
+    push @lines, "PrivateKey = $peer->{'PrivateKey'}\n";
+    push @lines, "Address = $peer->{'AllowedIPs'}\n";
     if ($peer->{'DNS'}) {
-        push @lines, "DNS = $peer->{'DNS'}";
+        push @lines, "DNS = $peer->{'DNS'}\n";
     }
-    push @lines, "";
-    push @lines, "[Peer]";
-    push @lines, "PublicKey = $server->{'PublicKey'}";
+    push @lines, "\n";
+    push @lines, "[Peer]\n";
+    push @lines, "PublicKey = $server->{'PublicKey'}\n";
     if ($peer->{'PresharedKey'}) {
-        push @lines, "PresharedKey = $peer->{'PresharedKey'}";
+        push @lines, "PresharedKey = $peer->{'PresharedKey'}\n";
     }
-    push @lines, "Endpoint = $server->{'Endpoint'}";
-    push @lines, "AllowedIPs = 0.0.0.0/0";
+    push @lines, "Endpoint = $server->{'Endpoint'}\n";
+    push @lines, "AllowedIPs = 0.0.0.0/0\n";
 
     &save_config_lines($path, \@lines);
     return 1;
@@ -585,7 +585,7 @@ sub write_file_lines {
     my ($file, $lines) = @_;
     &open_tempfile(my $fh, ">$file");
     foreach my $l (@$lines) {
-        &print_tempfile($fh, $l, "\n");
+        &print_tempfile($fh, $l);
     }
     &close_tempfile($fh);
 }
