@@ -436,7 +436,9 @@ sub get_peer_config_path {
     return undef unless $iface && $pubkey;
 
     my $dir = &get_peer_configs_dir();
-    my $path = "$dir/$iface-$pubkey.conf";
+    my $safe_pubkey = $pubkey;
+    $safe_pubkey =~ s/[^A-Za-z0-9_.-]/_/g;
+    my $path = "$dir/$iface-$safe_pubkey.conf";
 
     return $path;
 }
@@ -501,7 +503,7 @@ sub create_peer_config_file {
         &make_dir($dir, 0755);
     }
 
-    my $path = "$dir/$iface-$peer->{'PublicKey'}.conf";
+    my $path = &get_peer_config_path($iface, $peer->{'PublicKey'});
     &webmin_log("create_peer_config", "path", $path);
     my @lines;
     push @lines, "[Interface]\n";
