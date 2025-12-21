@@ -540,4 +540,35 @@ sub delete_peer_block {
     &save_config_lines($path, $out);
 }
 
+sub read_file_lines {
+    my ($file) = @_;
+    my @lines;
+    my $fh;
+    if (&open_readfile($fh, $file)) {
+        @lines = <$fh>;
+        close($fh);
+    }
+    return \@lines;
+}
+
+sub write_file_lines {
+    my ($file, $lines) = @_;
+    &open_tempfile(my $fh, ">$file");
+    foreach my $l (@$lines) {
+        &print_tempfile($fh, $l, "\n");
+    }
+    &close_tempfile($fh);
+}
+
+sub flush_file_lines {
+    # This is a no-op in the context of this module,
+    # as we are not using the file cache.
+    return 1;
+}
+
+sub make_dir {
+    my ($dir, $perms) = @_;
+    mkdir($dir, $perms);
+}
+
 1;
